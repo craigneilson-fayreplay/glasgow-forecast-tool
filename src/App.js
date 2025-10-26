@@ -981,7 +981,7 @@ const Glasgow14DayForecast = () => {
               </div>
             ) : weatherData && Object.keys(weatherData).length > 0 ? (
               <div className="mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3">
-                <div className="text-green-800 font-semibold">✅ Weather Data Loaded Successfully!</div>
+                <div className="text-green-800 font-semibold"> Weather Data Loaded Successfully!</div>
                 <div className="text-green-700 text-xs mt-1">
                   {Object.keys(weatherData).length} days of data ready
                   {weatherLastUpdated && (
