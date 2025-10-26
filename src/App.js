@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Upload, Calendar, AlertCircle, LogOut, Cloud, RefreshCw } from 'lucide-react';
+import { Upload, Calendar, TrendingUp, Users, DollarSign, AlertCircle, LogOut, Cloud, RefreshCw } from 'lucide-react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 // Replace this with your actual Google OAuth Client ID
@@ -295,7 +295,7 @@ const Glasgow14DayForecast = () => {
       0: 700,  // Sunday
       1: 131,  // Monday (fixed)
       2: 131,  // Tuesday (fixed)
-      3: 600,  // Wednesday (includes Â£100 manager time)
+      3: 600,  // Wednesday (includes £100 manager time)
       4: 500,  // Thursday
       5: 800,  // Friday
       6: 1000  // Saturday
@@ -962,7 +962,7 @@ const Glasgow14DayForecast = () => {
 
         {uploadedData && (
           <div className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3">
-            âœ“ Loaded: {uploadedData}
+             ✓ ✓ Loaded: {uploadedData}
           </div>
         )}
 
@@ -977,11 +977,11 @@ const Glasgow14DayForecast = () => {
             {loadingWeather ? (
               <div className="mt-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded p-3 flex items-center justify-center gap-2">
                 <RefreshCw size={16} className="animate-spin" />
-                â³ Fetching weather from Open-Meteo API...
+                 ⏳ ⏳ Fetching weather from Open-Meteo API...
               </div>
             ) : weatherData && Object.keys(weatherData).length > 0 ? (
               <div className="mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3">
-                <div className="text-green-800 font-semibold">âœ… Weather Data Loaded Successfully!</div>
+                <div className="text-green-800 font-semibold">✅ Weather Data Loaded Successfully!</div>
                 <div className="text-green-700 text-xs mt-1">
                   {Object.keys(weatherData).length} days of data ready
                   {weatherLastUpdated && (
@@ -991,12 +991,12 @@ const Glasgow14DayForecast = () => {
                   )}
                 </div>
                 <div className="text-green-700 text-xs mt-2 font-semibold">
-                  âžœ Weather columns are now visible in the tables above
+                   Weather columns are now visible in the tables above
                 </div>
               </div>
             ) : !loadingWeather ? (
               <div className="mt-3 text-sm bg-red-50 border-2 border-red-300 rounded p-3">
-                <div className="text-red-800 font-semibold">âš ï¸ Weather Data Not Yet Loaded</div>
+                <div className="text-red-800 font-semibold">⚠ Weather Data Not Yet Loaded</div>
                 <div className="text-red-700 text-xs mt-1">
                   Still waiting for weather API response...
                 </div>
@@ -1149,7 +1149,7 @@ const Glasgow14DayForecast = () => {
                 {thisWeek.length > 0 && allWeeks.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold">ðŸ“… This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
+                      <h2 className="text-2xl font-bold"> 📅 This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
                         className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
@@ -1175,9 +1175,9 @@ const Glasgow14DayForecast = () => {
                                   Rain (mm)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
+                                  🌡
                                   <br />
-                                  Temp (Â°C)
+                                  Temp (°C)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
                                 <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
@@ -1208,8 +1208,8 @@ const Glasgow14DayForecast = () => {
                                 </span>
                               </td>
                               <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
-                              <td className="px-2 md:px-3 py-2 text-center text-xs">Ã—{day.multiplier.toFixed(2)}</td>
-                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>âš </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>⚠</span>}</span></td>
                               {showWeatherInfo && (
                                 <>
                                   <td className="px-2 md:px-3 py-2 text-center font-bold">
@@ -1229,7 +1229,7 @@ const Glasgow14DayForecast = () => {
                                   <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
-                                        Ã—{day.weatherMultiplier.toFixed(2)}
+                                        {day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
@@ -1239,8 +1239,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1258,7 +1258,7 @@ const Glasgow14DayForecast = () => {
                 {nextWeek.length > 0 && allWeeks.length > 1 && (
                   <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold">ðŸ“… Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
+                      <h2 className="text-2xl font-bold"> Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
                         className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
@@ -1284,9 +1284,9 @@ const Glasgow14DayForecast = () => {
                                   Rain (mm)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
+                                  🌡
                                   <br />
-                                  Temp (Â°C)
+                                  Temp (°C)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
                                 <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
@@ -1317,8 +1317,8 @@ const Glasgow14DayForecast = () => {
                                 </span>
                               </td>
                               <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
-                              <td className="px-2 md:px-3 py-2 text-center text-xs">Ã—{day.multiplier.toFixed(2)}</td>
-                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>âš </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>⚠</span>}</span></td>
                               {showWeatherInfo && (
                                 <>
                                   <td className="px-2 md:px-3 py-2 text-center font-bold">
@@ -1338,7 +1338,7 @@ const Glasgow14DayForecast = () => {
                                   <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
-                                        Ã—{day.weatherMultiplier.toFixed(2)}
+                                        {day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
@@ -1348,8 +1348,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1389,12 +1389,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Required Budget</div>
-                    <div className="text-xl font-bold text-blue-700">Â£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className="text-xs text-gray-500">Actual: Â£{week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xl font-bold text-blue-700">£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: £{week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Revenue</div>
-                    <div className="text-xl font-bold">Â£{week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xl font-bold">£{week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
@@ -1407,12 +1407,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    Â£{(week.totalRevenue * 0.25).toFixed(0)} for 25%
+                    £{(week.totalRevenue * 0.25).toFixed(0)} for 25%
                     {week.laborPct <= 25 && (
-                      <span className="text-green-700 ml-2">âœ“ Under budget</span>
+                      <span className="text-green-700 ml-2"> ✓ Under budget</span>
                     )}
                     {week.laborPct > 25 && (
-                      <span className="text-red-700 ml-2">âš   Over budget</span>
+                      <span className="text-red-700 ml-2">⚠  ⚠ Over budget</span>
                     )}
                   </div>
                 </div>
