@@ -8,4 +8,3 @@ root.render(
     <ProtectedGlasgowForecast />
   </React.StrictMode>
 );
-
