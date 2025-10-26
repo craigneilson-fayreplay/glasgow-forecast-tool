@@ -509,7 +509,7 @@ const Glasgow14DayForecast = () => {
       const lines = text.trim().split('\n');
       
       const headerLine = lines[0];
-      const headers = headerLine.split(',').map(h => h.trim().replace(/^|$/g, ''));
+      const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       
       const dateCol = headers.findIndex(h => h === 'Event date');
       const peopleCol = headers.findIndex(h => h === 'people');
@@ -540,9 +540,9 @@ const Glasgow14DayForecast = () => {
         for (let j = 0; j < line.length; j++) {
           const char = line[j];
           
-          if (char === '') {
-            if (inQuotes && line[j + 1] === '') {
-              current += '';
+          if (char === '"') {
+            if (inQuotes && line[j + 1] === '"') {
+              current += '"';
               j++;
             } else {
               inQuotes = !inQuotes;
@@ -871,28 +871,28 @@ const Glasgow14DayForecast = () => {
 
   if (!user) {
     return (
-      <div className=min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4>
-        <div className=bg-white rounded-lg shadow-xl p-8 max-w-md w-full>
-          <div className=text-center mb-8>
-            <Calendar size={48} className=mx-auto mb-4 text-indigo-600 />
-            <h1 className=text-3xl font-bold text-gray-900>Glasgow Forecast</h1>
-            <p className=text-gray-600 mt-2>14-Day Staffing & Revenue Forecast</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <Calendar size={48} className="mx-auto mb-4 text-indigo-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Glasgow Forecast</h1>
+            <p className="text-gray-600 mt-2">14-Day Staffing & Revenue Forecast</p>
           </div>
           
           {loginError && (
-            <div className=mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
               {loginError}
             </div>
           )}
           
-          <div className=flex justify-center>
+          <div className="flex justify-center">
             <GoogleLogin
               onSuccess={handleLoginSuccess}
               onError={handleLoginError}
             />
           </div>
           
-          <p className=text-xs text-gray-500 text-center mt-6>
+          <p className="text-xs text-gray-500 text-center mt-6">
             Access restricted to @thefayreplay.co.uk
           </p>
         </div>
@@ -901,18 +901,18 @@ const Glasgow14DayForecast = () => {
   }
 
   return (
-    <div className=max-w-7xl mx-auto p-4 bg-gray-50 min-h-screen>
-      <div className=bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6 flex justify-between items-center>
-        <div className=flex items-center gap-3 flex-1>
+    <div className="max-w-7xl mx-auto p-4 bg-gray-50 min-h-screen">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6 flex justify-between items-center">
+        <div className="flex items-center gap-3 flex-1">
           <Calendar size={32} />
           <div>
-            <h1 className=text-3xl font-bold>{VENUE_COORDINATES[venue].name} 14-Day Staffing Forecast</h1>
-            <p className=text-indigo-100>With Automatic Weather Integration</p>
+            <h1 className="text-3xl font-bold">{VENUE_COORDINATES[venue].name} 14-Day Staffing Forecast</h1>
+            <p className="text-indigo-100">With Automatic Weather Integration</p>
           </div>
         </div>
-        <div className=flex items-center gap-4>
-          <div className=flex items-center gap-2>
-            <label className=text-sm font-semibold>Venue:</label>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold">Venue:</label>
             <select
               value={venue}
               onChange={(e) => {
@@ -921,16 +921,16 @@ const Glasgow14DayForecast = () => {
                 setUploadedData(null);
                 setWeatherData(null);
               }}
-              className=bg-white bg-opacity-20 text-white border border-white rounded px-3 py-2 text-sm font-medium hover:bg-opacity-30 transition
+              className="bg-white bg-opacity-20 text-white border border-white rounded px-3 py-2 text-sm font-medium hover:bg-opacity-30 transition"
             >
-              <option value=glasgow className=text-gray-800>Glasgow</option>
-              <option value=edinburgh className=text-gray-800>Edinburgh</option>
-              <option value=newcastle className=text-gray-800>Newcastle</option>
+              <option value="glasgow" className="text-gray-800">Glasgow</option>
+              <option value="edinburgh" className="text-gray-800">Edinburgh</option>
+              <option value="newcastle" className="text-gray-800">Newcastle</option>
             </select>
           </div>
           <button
             onClick={handleLogout}
-            className=bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg flex items-center gap-2 transition
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg flex items-center gap-2 transition"
           >
             <LogOut size={18} />
             Logout
@@ -939,50 +939,50 @@ const Glasgow14DayForecast = () => {
       </div>
 
       {/* Upload Section */}
-      <div className=bg-white rounded-lg border-2 border-dashed border-indigo-300 p-8 text-center mb-6>
-        <Upload size={48} className=mx-auto mb-4 text-indigo-600 />
-        <h3 className=text-lg font-semibold mb-2>Upload Booking Data</h3>
-        <p className=text-sm text-gray-600 mb-4>
+      <div className="bg-white rounded-lg border-2 border-dashed border-indigo-300 p-8 text-center mb-6">
+        <Upload size={48} className="mx-auto mb-4 text-indigo-600" />
+        <h3 className="text-lg font-semibold mb-2">Upload Booking Data</h3>
+        <p className="text-sm text-gray-600 mb-4">
           CSV from Booked.it (next 14 days)
         </p>
         
         <input
-          type=file
-          accept=.csv
+          type="file"
+          accept=".csv"
           onChange={handleFileUpload}
-          className=hidden
-          id=file-upload
+          className="hidden"
+          id="file-upload"
         />
         <label
-          htmlFor=file-upload
-          className=inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg cursor-pointer hover:bg-indigo-700 transition
+          htmlFor="file-upload"
+          className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg cursor-pointer hover:bg-indigo-700 transition"
         >
           Choose CSV File
         </label>
 
         {uploadedData && (
-          <div className=mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3>
-            ⚠œ“ Loaded: {uploadedData}
+          <div className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3">
+            âœ“ Loaded: {uploadedData}
           </div>
         )}
 
         {/* Weather Status - Enhanced Indicator */}
         {forecasts.length > 0 && (
-          <div className=mt-6 pt-6 border-t border-gray-200>
-            <div className=flex items-center justify-center gap-2>
-              <Cloud size={20} className=text-blue-600 />
-              <span className=font-semibold text-gray-900>Weather Data Status</span>
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-center gap-2">
+              <Cloud size={20} className="text-blue-600" />
+              <span className="font-semibold text-gray-900">Weather Data Status</span>
             </div>
             
             {loadingWeather ? (
-              <div className=mt-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded p-3 flex items-center justify-center gap-2>
-                <RefreshCw size={16} className=animate-spin />
-                ⚠³ Fetching weather from Open-Meteo API...
+              <div className="mt-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded p-3 flex items-center justify-center gap-2">
+                <RefreshCw size={16} className="animate-spin" />
+                â³ Fetching weather from Open-Meteo API...
               </div>
             ) : weatherData && Object.keys(weatherData).length > 0 ? (
-              <div className=mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3>
-                <div className=text-green-800 font-semibold>✅ Weather Data Loaded Successfully!</div>
-                <div className=text-green-700 text-xs mt-1>
+              <div className="mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3">
+                <div className="text-green-800 font-semibold">✅ Weather Data Loaded Successfully!</div>
+                <div className="text-green-700 text-xs mt-1">
                   {Object.keys(weatherData).length} days of data ready
                   {weatherLastUpdated && (
                     <div>
@@ -990,19 +990,19 @@ const Glasgow14DayForecast = () => {
                     </div>
                   )}
                 </div>
-                <div className=text-green-700 text-xs mt-2 font-semibold>
+                <div className="text-green-700 text-xs mt-2 font-semibold">
                   → Weather columns are now visible in the tables above
                 </div>
               </div>
             ) : !loadingWeather ? (
-              <div className=mt-3 text-sm bg-red-50 border-2 border-red-300 rounded p-3>
-                <div className=text-red-800 font-semibold>⚠⚠ ï¸ Weather Data Not Yet Loaded</div>
-                <div className=text-red-700 text-xs mt-1>
+              <div className="mt-3 text-sm bg-red-50 border-2 border-red-300 rounded p-3">
+                <div className="text-red-800 font-semibold">⚠ ï¸ Weather Data Not Yet Loaded</div>
+                <div className="text-red-700 text-xs mt-1">
                   Still waiting for weather API response...
                 </div>
                 <button
                   onClick={handleRefreshWeather}
-                  className=mt-2 text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition flex items-center gap-1
+                  className="mt-2 text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"
                 >
                   <RefreshCw size={12} />
                   Try Again
@@ -1014,7 +1014,7 @@ const Glasgow14DayForecast = () => {
               <button
                 onClick={handleRefreshWeather}
                 disabled={loadingWeather}
-                className=mt-3 text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-1 mx-auto
+                className="mt-3 text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-1 mx-auto"
               >
                 <RefreshCw size={14} />
                 Refresh Weather Data
@@ -1025,8 +1025,8 @@ const Glasgow14DayForecast = () => {
       </div>
 
       {error && (
-        <div className=mb-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-4 flex items-start gap-2>
-          <AlertCircle size={20} className=flex-shrink-0 mt-0.5 />
+        <div className="mb-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-4 flex items-start gap-2">
+          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
@@ -1147,46 +1147,46 @@ const Glasgow14DayForecast = () => {
               <>
                 {/* THIS WEEK TABLE */}
                 {thisWeek.length > 0 && allWeeks.length > 0 && (
-                  <div className=bg-white rounded-lg border border-gray-200 p-6 mb-6>
-                    <div className=flex items-center justify-between mb-4>
-                      <h2 className="text-2xl font-bold">📅 This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
+                  <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-2xl font-bold">ðŸ“… This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
-                        className=text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1
+                        className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
                       >
                         <Cloud size={14} />
                         {showWeatherInfo ? 'Hide' : 'Show'} Weather
                       </button>
                     </div>
                     
-                    <div className=overflow-x-auto>
-                      <table className=w-full text-xs md:text-sm>
-                        <thead className=bg-gray-100>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs md:text-sm">
+                        <thead className="bg-gray-100">
                           <tr>
-                            <th className=px-2 md:px-3 py-2 text-left>Date</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Day</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Current</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Mult</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Forecast</th>
+                            <th className="px-2 md:px-3 py-2 text-left">Date</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Day</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Current</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Mult</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Forecast</th>
                             {showWeatherInfo && (
                               <>
-                                <th className=px-2 md:px-3 py-2 text-center>
-                                  <Cloud size={14} className=mx-auto mb-0.5 />
+                                <th className="px-2 md:px-3 py-2 text-center">
+                                  <Cloud size={14} className="mx-auto mb-0.5" />
                                   Rain (mm)
                                 </th>
-                                <th className=px-2 md:px-3 py-2 text-center>
-                                  🌡ï¸Â
+                                <th className="px-2 md:px-3 py-2 text-center">
+                                  ðŸŒ¡ï¸Â
                                   <br />
                                   Temp (°C)
                                 </th>
-                                <th className=px-2 md:px-3 py-2 text-center>W.Mult</th>
-                                <th className=px-2 md:px-3 py-2 text-center>Adj.</th>
+                                <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
+                                <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
                               </>
                             )}
-                            <th className=px-2 md:px-3 py-2 text-center>Hrs</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Budget</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Revenue</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Lab%</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Hrs</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Budget</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Revenue</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Lab%</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1197,8 +1197,8 @@ const Glasgow14DayForecast = () => {
                               day.isPotentialPrivateFunction ? 'bg-yellow-50' : 
                               day.isClosed ? 'bg-gray-50' : ''
                             }`}>
-                              <td className=px-2 md:px-3 py-2 font-medium text-xs md:text-sm>{day.dateStr}</td>
-                              <td className=px-2 md:px-3 py-2 text-center>
+                              <td className="px-2 md:px-3 py-2 font-medium text-xs md:text-sm">{day.dateStr}</td>
+                              <td className="px-2 md:px-3 py-2 text-center">
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${
                                   day.dayOfWeek === 6 ? 'bg-purple-100 text-purple-800' :
                                   day.dayOfWeek === 0 ? 'bg-blue-100 text-blue-800' :
@@ -1207,41 +1207,41 @@ const Glasgow14DayForecast = () => {
                                   {day.dayName}
                                 </span>
                               </td>
-                              <td className=px-2 md:px-3 py-2 text-center font-medium>{day.currentCovers}</td>
-                              <td className=px-2 md:px-3 py-2 text-center text-xs>×{day.multiplier.toFixed(2)}</td>
-                              <td className=px-2 md:px-3 py-2 text-center font-bold><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className=ml-1 font-bold title={`Exceeds capacity of ${day.venueCapacity}`}>⚠⚠ </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">×{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>⚠ </span>}</span></td>
                               {showWeatherInfo && (
                                 <>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold">
                                     {day.weatherInfo ? (
                                       <span className={day.weatherInfo.precipitation_mm > 5 ? 'text-blue-700' : 'text-gray-700'}>
                                         {day.weatherInfo.precipitation_mm.toFixed(1)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold">
                                     {day.weatherInfo ? (
                                       <span className={day.weatherInfo.temp_max > 20 ? 'text-red-700' : 'text-gray-700'}>
                                         {day.weatherInfo.temp_max.toFixed(0)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center>
+                                  <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
                                         ×{day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold text-blue-700>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold text-blue-700">
                                     {day.forecastCoversWithWeather !== undefined ? day.forecastCoversWithWeather : day.forecastCovers}
                                   </td>
                                 </>
                               )}
-                              <td className=px-2 md:px-3 py-2 text-center text-sm>{day.staffHours}</td>
-                              <td className=px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700>£{day.budgetRequired.toFixed(0)}</td>
-                              <td className=px-2 md:px-3 py-2 text-right text-sm>£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
-                              <td className=px-2 md:px-3 py-2 text-right>
+                              <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
                                 </span>
@@ -1256,46 +1256,46 @@ const Glasgow14DayForecast = () => {
 
                 {/* NEXT WEEK TABLE */}
                 {nextWeek.length > 0 && allWeeks.length > 1 && (
-                  <div className=bg-white rounded-lg border border-gray-200 p-6 mb-6>
-                    <div className=flex items-center justify-between mb-4>
-                      <h2 className="text-2xl font-bold">📅 Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
+                  <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-2xl font-bold">ðŸ“… Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
-                        className=text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1
+                        className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
                       >
                         <Cloud size={14} />
                         {showWeatherInfo ? 'Hide' : 'Show'} Weather
                       </button>
                     </div>
                     
-                    <div className=overflow-x-auto>
-                      <table className=w-full text-xs md:text-sm>
-                        <thead className=bg-gray-100>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs md:text-sm">
+                        <thead className="bg-gray-100">
                           <tr>
-                            <th className=px-2 md:px-3 py-2 text-left>Date</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Day</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Current</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Mult</th>
-                            <th className=px-2 md:px-3 py-2 text-center>Forecast</th>
+                            <th className="px-2 md:px-3 py-2 text-left">Date</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Day</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Current</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Mult</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Forecast</th>
                             {showWeatherInfo && (
                               <>
-                                <th className=px-2 md:px-3 py-2 text-center>
-                                  <Cloud size={14} className=mx-auto mb-0.5 />
+                                <th className="px-2 md:px-3 py-2 text-center">
+                                  <Cloud size={14} className="mx-auto mb-0.5" />
                                   Rain (mm)
                                 </th>
-                                <th className=px-2 md:px-3 py-2 text-center>
-                                  🌡ï¸Â
+                                <th className="px-2 md:px-3 py-2 text-center">
+                                  ðŸŒ¡ï¸Â
                                   <br />
                                   Temp (°C)
                                 </th>
-                                <th className=px-2 md:px-3 py-2 text-center>W.Mult</th>
-                                <th className=px-2 md:px-3 py-2 text-center>Adj.</th>
+                                <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
+                                <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
                               </>
                             )}
-                            <th className=px-2 md:px-3 py-2 text-center>Hrs</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Budget</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Revenue</th>
-                            <th className=px-2 md:px-3 py-2 text-right>Lab%</th>
+                            <th className="px-2 md:px-3 py-2 text-center">Hrs</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Budget</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Revenue</th>
+                            <th className="px-2 md:px-3 py-2 text-right">Lab%</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1306,8 +1306,8 @@ const Glasgow14DayForecast = () => {
                               day.isPotentialPrivateFunction ? 'bg-yellow-50' : 
                               day.isClosed ? 'bg-gray-50' : ''
                             }`}>
-                              <td className=px-2 md:px-3 py-2 font-medium text-xs md:text-sm>{day.dateStr}</td>
-                              <td className=px-2 md:px-3 py-2 text-center>
+                              <td className="px-2 md:px-3 py-2 font-medium text-xs md:text-sm">{day.dateStr}</td>
+                              <td className="px-2 md:px-3 py-2 text-center">
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${
                                   day.dayOfWeek === 6 ? 'bg-purple-100 text-purple-800' :
                                   day.dayOfWeek === 0 ? 'bg-blue-100 text-blue-800' :
@@ -1316,41 +1316,41 @@ const Glasgow14DayForecast = () => {
                                   {day.dayName}
                                 </span>
                               </td>
-                              <td className=px-2 md:px-3 py-2 text-center font-medium>{day.currentCovers}</td>
-                              <td className=px-2 md:px-3 py-2 text-center text-xs>×{day.multiplier.toFixed(2)}</td>
-                              <td className=px-2 md:px-3 py-2 text-center font-bold><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className=ml-1 font-bold title={`Exceeds capacity of ${day.venueCapacity}`}>⚠⚠ </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">×{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>⚠ </span>}</span></td>
                               {showWeatherInfo && (
                                 <>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold">
                                     {day.weatherInfo ? (
                                       <span className={day.weatherInfo.precipitation_mm > 5 ? 'text-blue-700' : 'text-gray-700'}>
                                         {day.weatherInfo.precipitation_mm.toFixed(1)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold">
                                     {day.weatherInfo ? (
                                       <span className={day.weatherInfo.temp_max > 20 ? 'text-red-700' : 'text-gray-700'}>
                                         {day.weatherInfo.temp_max.toFixed(0)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center>
+                                  <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
                                         ×{day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                  <td className=px-2 md:px-3 py-2 text-center font-bold text-blue-700>
+                                  <td className="px-2 md:px-3 py-2 text-center font-bold text-blue-700">
                                     {day.forecastCoversWithWeather !== undefined ? day.forecastCoversWithWeather : day.forecastCovers}
                                   </td>
                                 </>
                               )}
-                              <td className=px-2 md:px-3 py-2 text-center text-sm>{day.staffHours}</td>
-                              <td className=px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700>£{day.budgetRequired.toFixed(0)}</td>
-                              <td className=px-2 md:px-3 py-2 text-right text-sm>£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
-                              <td className=px-2 md:px-3 py-2 text-right>
+                              <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
                                 </span>
@@ -1367,52 +1367,52 @@ const Glasgow14DayForecast = () => {
           })()}
 
           {/* Weekly Summaries */}
-          <div className=space-y-4>
-            <h2 className=text-2xl font-bold>Weekly Summaries</h2>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Weekly Summaries</h2>
             {weeklySummaries.map((week, idx) => (
-              <div key={idx} className=bg-white rounded-lg border-2 border-indigo-200 p-6>
-                <h3 className=text-lg font-bold mb-4>Week of {week.weekOf}</h3>
+              <div key={idx} className="bg-white rounded-lg border-2 border-indigo-200 p-6">
+                <h3 className="text-lg font-bold mb-4">Week of {week.weekOf}</h3>
                 
-                <div className=grid grid-cols-2 md:grid-cols-5 gap-4 mb-4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Operating Days</div>
-                    <div className=text-xl font-bold>{week.operatingDays}</div>
+                    <div className="text-xs text-gray-600 mb-1">Operating Days</div>
+                    <div className="text-xl font-bold">{week.operatingDays}</div>
                   </div>
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Total Covers</div>
-                    <div className=text-xl font-bold text-indigo-700>{week.totalCovers}</div>
+                    <div className="text-xs text-gray-600 mb-1">Total Covers</div>
+                    <div className="text-xl font-bold text-indigo-700">{week.totalCovers}</div>
                   </div>
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Staff Hours</div>
-                    <div className=text-xl font-bold text-green-700>{week.totalStaffHours + 75}</div>
-                    <div className=text-xs text-gray-500>{week.totalStaffHours} + 75 mgr</div>
+                    <div className="text-xs text-gray-600 mb-1">Staff Hours</div>
+                    <div className="text-xl font-bold text-green-700">{week.totalStaffHours + 75}</div>
+                    <div className="text-xs text-gray-500">{week.totalStaffHours} + 75 mgr</div>
                   </div>
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Required Budget</div>
-                    <div className=text-xl font-bold text-blue-700>£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className=text-xs text-gray-500>Actual: £{week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xs text-gray-600 mb-1">Required Budget</div>
+                    <div className="text-xl font-bold text-blue-700">£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: £{week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Revenue</div>
-                    <div className=text-xl font-bold>£{week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xs text-gray-600 mb-1">Revenue</div>
+                    <div className="text-xl font-bold">£{week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
-                <div className=grid grid-cols-1 md:grid-cols-2 gap-4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <div className=text-xs text-gray-600 mb-1>Labor %</div>
+                    <div className="text-xs text-gray-600 mb-1">Labor %</div>
                     <div className={`text-2xl font-bold px-3 py-1 rounded inline-block ${getStatusColor(week.laborPct)}`}>
                       {week.laborPct.toFixed(1)}%
                     </div>
                   </div>
-                  <div className=text-sm text-gray-700>
-                    <span className=font-semibold>Target: </span>
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">Target: </span>
                     £{(week.totalRevenue * 0.25).toFixed(0)} for 25%
                     {week.laborPct <= 25 && (
-                      <span className=text-green-700 ml-2>⚠œ“ Under budget</span>
+                      <span className="text-green-700 ml-2">âœ“ Under budget</span>
                     )}
                     {week.laborPct > 25 && (
-                      <span className=text-red-700 ml-2>⚠⚠   Over budget</span>
+                      <span className="text-red-700 ml-2">⚠   Over budget</span>
                     )}
                   </div>
                 </div>
