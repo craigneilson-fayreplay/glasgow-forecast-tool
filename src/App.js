@@ -981,7 +981,7 @@ const Glasgow14DayForecast = () => {
               </div>
             ) : weatherData && Object.keys(weatherData).length > 0 ? (
               <div className="mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3">
-                <div className="text-green-800 font-semibold"> Weather Data Loaded Successfully!</div>
+                <div className="text-green-800 font-semibold">✅ Weather Data Loaded Successfully!</div>
                 <div className="text-green-700 text-xs mt-1">
                   {Object.keys(weatherData).length} days of data ready
                   {weatherLastUpdated && (
@@ -996,7 +996,7 @@ const Glasgow14DayForecast = () => {
               </div>
             ) : !loadingWeather ? (
               <div className="mt-3 text-sm bg-red-50 border-2 border-red-300 rounded p-3">
-                <div className="text-red-800 font-semibold">⚠ ï¸ Weather Data Not Yet Loaded</div>
+                <div className="text-red-800 font-semibold">⚠  Weather Data Not Yet Loaded</div>
                 <div className="text-red-700 text-xs mt-1">
                   Still waiting for weather API response...
                 </div>
@@ -1175,7 +1175,7 @@ const Glasgow14DayForecast = () => {
                                   Rain (mm)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
+                                  🌡Â
                                   <br />
                                   Temp (°C)
                                 </th>
@@ -1284,7 +1284,7 @@ const Glasgow14DayForecast = () => {
                                   Rain (mm)
                                 </th>
                                 <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
+                                  🌡Â
                                   <br />
                                   Temp (°C)
                                 </th>
