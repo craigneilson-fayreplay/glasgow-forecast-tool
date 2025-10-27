@@ -518,6 +518,15 @@ const Glasgow14DayForecast = () => {
       const amountCol = headers.findIndex(h => h === 'amount');
       const emailCol = headers.findIndex(h => h === 'email');
       const usernameCol = headers.findIndex(h => h === 'username');
+      const venueCol = headers.findIndex(h => h === 'venue');
+      
+      // Map selected venue to expected venue name in CSV
+      const venueNameMap = {
+        glasgow: 'Fayre Play Glasgow',
+        edinburgh: 'Fayre Play Edinburgh',
+        newcastle: 'Fayre Play Newcastle'
+      };
+      const selectedVenueName = venueNameMap[venue];
       
       if (dateCol === -1 || peopleCol === -1) {
         setError(`CSV columns not found. Found: ${headers.join(', ')}`);
@@ -563,6 +572,12 @@ const Glasgow14DayForecast = () => {
         const status = statusCol !== -1 ? row[statusCol].toLowerCase() : 'active';
         const email = emailCol !== -1 ? row[emailCol].toLowerCase() : '';
         const username = usernameCol !== -1 ? row[usernameCol].toLowerCase() : '';
+        const bookingVenue = venueCol !== -1 ? row[venueCol].trim() : '';
+
+        // FILTER: Only include bookings for the selected venue
+        if (selectedVenueName && bookingVenue !== selectedVenueName) {
+          continue;
+        }
 
         // FILTER: Skip test data
         if (email.includes('test') || username.includes('test')) {
