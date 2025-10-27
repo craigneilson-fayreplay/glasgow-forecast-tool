@@ -1198,8 +1198,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">GBP {day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">GBP {(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1299,8 +1299,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">GBP {day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">GBP {(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1339,12 +1339,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Required Budget</div>
-                    <div className="text-xl font-bold text-blue-700">GBP {(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className="text-xs text-gray-500">Actual: GBP {week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xl font-bold text-blue-700">£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: £{week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Revenue</div>
-                    <div className="text-xl font-bold">GBP {week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xl font-bold">£{week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
@@ -1357,7 +1357,7 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    GBP {(week.totalRevenue * 0.25).toFixed(0)} for 25%
+                    £{(week.totalRevenue * 0.25).toFixed(0)} for 25%
                     {week.laborPct <= 25 && (
                       <span className="text-green-700 ml-2">[OK] Under budget</span>
                     )}
