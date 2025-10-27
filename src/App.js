@@ -18,9 +18,9 @@ const VENUE_COORDINATES = {
 // ============================================================================
 
 const VENUE_CAPACITIES = {
-  glasgow: 475,     // Glasgow max capacity
-  edinburgh: 450,   // Edinburgh max capacity
-  newcastle: 450    // Newcastle max capacity
+  glasgow: 475,
+  edinburgh: 450,
+  newcastle: 450
 };
 
 // ============================================================================
@@ -58,7 +58,6 @@ const WEATHER_MULTIPLIERS = {
     }
   },
   sat: {
-    // Weather has minimal impact on Saturday
     rainfall: {
       noRain: 1.00
     },
@@ -87,33 +86,31 @@ const WEATHER_MULTIPLIERS = {
 
 const VENUE_MULTIPLIERS = {
   glasgow: {
-    0: { day14: 8.81, day7: 4.55, day3: 2.36, day1: 1.63 }, // Sunday
-    1: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Monday
-    2: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Tuesday
-    3: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Wednesday
-    4: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Thursday
-    5: { day14: 4.54, day7: 3.02, day3: 1.97, day1: 1.43 }, // Friday
-    6: { day14: 6.85, day7: 3.25, day3: 1.95, day1: 1.43 }  // Saturday
+    0: { day14: 8.81, day7: 4.55, day3: 2.36, day1: 1.63 },
+    1: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    2: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    3: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    4: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    5: { day14: 4.54, day7: 3.02, day3: 1.97, day1: 1.43 },
+    6: { day14: 6.85, day7: 3.25, day3: 1.95, day1: 1.43 }
   },
   edinburgh: {
-    0: { day14: 8.37, day7: 5.14, day3: 2.99, day1: 2.08 }, // Sunday
-    1: { day14: 6.66, day7: 4.40, day3: 3.73, day1: 2.34 }, // Monday (Wed equiv)
-    2: { day14: 6.66, day7: 4.40, day3: 3.73, day1: 2.34 }, // Tuesday (Wed equiv)
-    3: { day14: 6.66, day7: 3.40, day3: 3.73, day1: 2.34 }, // Wednesday
-    4: { day14: 9.42, day7: 3.87, day3: 3.08, day1: 2.76 }, // Thursday
-    5: { day14: 5.58, day7: 3.71, day3: 2.10, day1: 1.73 }, // Friday
-    6: { day14: 3.93, day7: 2.59, day3: 1.89, day1: 1.56 }  // Saturday
+    0: { day14: 8.37, day7: 5.14, day3: 2.99, day1: 2.08 },
+    1: { day14: 6.66, day7: 4.40, day3: 3.73, day1: 2.34 },
+    2: { day14: 6.66, day7: 4.40, day3: 3.73, day1: 2.34 },
+    3: { day14: 6.66, day7: 3.40, day3: 3.73, day1: 2.34 },
+    4: { day14: 9.42, day7: 3.87, day3: 3.08, day1: 2.76 },
+    5: { day14: 5.58, day7: 3.71, day3: 2.10, day1: 1.73 },
+    6: { day14: 3.93, day7: 2.59, day3: 1.89, day1: 1.56 }
   },
   newcastle: {
-    // Newcastle - Using Glasgow forecasting model as placeholder
-    // Mon/Tue/Wed use Thursday multipliers until more data is available
-    0: { day14: 8.81, day7: 4.55, day3: 2.36, day1: 1.63 }, // Sunday (Glasgow)
-    1: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Monday (Glasgow Thursday placeholder)
-    2: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Tuesday (Glasgow Thursday placeholder)
-    3: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Wednesday (Glasgow Thursday placeholder)
-    4: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 }, // Thursday (Glasgow)
-    5: { day14: 4.54, day7: 3.02, day3: 1.97, day1: 1.43 }, // Friday (Glasgow)
-    6: { day14: 6.85, day7: 3.25, day3: 1.95, day1: 1.43 }  // Saturday (Glasgow)
+    0: { day14: 8.81, day7: 4.55, day3: 2.36, day1: 1.63 },
+    1: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    2: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    3: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    4: { day14: 5.03, day7: 2.92, day3: 1.86, day1: 1.37 },
+    5: { day14: 4.54, day7: 3.02, day3: 1.97, day1: 1.43 },
+    6: { day14: 6.85, day7: 3.25, day3: 1.95, day1: 1.43 }
   }
 };
 
@@ -134,14 +131,11 @@ const getWeatherMultiplier = (dayName, rainfallMM, temperatureCelsius) => {
   
   const dayData = WEATHER_MULTIPLIERS[day];
   
-  // Saturday: skip weather adjustment entirely
   if (day === 'saturday') return 1.0;
   
-  // Get rainfall multiplier
   const rainfallCondition = classifyRainfall(rainfallMM);
   let rainfallMult = dayData.rainfall[rainfallCondition] || 1.0;
   
-  // Get temperature multiplier
   let tempMult = 1.0;
   if (temperatureCelsius < 5) {
     tempMult = dayData.temperature.mild || 1.0;
@@ -155,7 +149,6 @@ const getWeatherMultiplier = (dayName, rainfallMM, temperatureCelsius) => {
     tempMult = dayData.temperature.veryHot || dayData.temperature.hot || 1.0;
   }
   
-  // Combine multipliers (multiplicative)
   return rainfallMult * tempMult;
 };
 
@@ -164,26 +157,15 @@ const getWeatherMultiplier = (dayName, rainfallMM, temperatureCelsius) => {
 // ============================================================================
 
 const fetchWeatherData = async (daysFromNow = 14, venue = 'glasgow') => {
-  /**
-   * Fetch weather data from Open-Meteo API
-   * No API key needed - completely free!
-   * 
-   * @param {number} daysFromNow - How many days to forecast (default 14)
-   * @param {string} venue - Which venue (glasgow, edinburgh, newcastle)
-   * @returns {object} Weather data or null if error
-   */
-  
   try {
     const venueCoords = VENUE_COORDINATES[venue] || VENUE_COORDINATES.glasgow;
     const today = new Date();
     const startDate = today.toISOString().split('T')[0];
     
-    // Calculate end date
     const endDate = new Date(today);
     endDate.setDate(endDate.getDate() + daysFromNow);
     const endDateStr = endDate.toISOString().split('T')[0];
     
-    // Build Open-Meteo API URL - Use forecast endpoint (not archive)
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.append('latitude', venueCoords.lat);
     url.searchParams.append('longitude', venueCoords.lon);
@@ -199,7 +181,6 @@ const fetchWeatherData = async (daysFromNow = 14, venue = 'glasgow') => {
     
     const data = await response.json();
     
-    // Convert to lookup table
     const weatherLookup = {};
     if (data.daily && data.daily.time) {
       for (let i = 0; i < data.daily.time.length; i++) {
@@ -221,6 +202,44 @@ const fetchWeatherData = async (daysFromNow = 14, venue = 'glasgow') => {
 };
 
 // ============================================================================
+// HELPER: Get Monday of current week
+// ============================================================================
+
+const getMondayOfWeek = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  
+  // Sunday is 0, Monday is 1, Tuesday is 2, etc.
+  // We want to find Monday of this week
+  let daysToSubtract;
+  if (day === 0) {
+    // Today is Sunday - Monday was 6 days ago
+    daysToSubtract = 6;
+  } else if (day === 1) {
+    // Today is Monday - we're already on Monday
+    daysToSubtract = 0;
+  } else {
+    // Today is Tue-Sat - Monday was (day-1) days ago
+    daysToSubtract = day - 1;
+  }
+  
+  d.setDate(d.getDate() - daysToSubtract);
+  return d;
+};
+
+// ============================================================================
+// HELPER: Get consistent date string (YYYY-MM-DD) in local time
+// ============================================================================
+
+const getDateString = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -230,50 +249,48 @@ const Glasgow14DayForecast = () => {
   const HOURLY_RATE = 12.60;
   const MANAGER_WEEKLY_COST = 596.15;
 
-  // Revenue per cover by day (EX VAT) - Venue specific
   const getRevenuePerCover = (dayOfWeek) => {
     const revenueByVenue = {
       glasgow: {
-        0: 26.74, // Sunday
-        1: 25.70, // Monday
-        2: 25.70, // Tuesday
-        3: 25.70, // Wednesday
-        4: 25.70, // Thursday
-        5: 27.72, // Friday
-        6: 27.59  // Saturday
+        0: 26.74,
+        1: 25.70,
+        2: 25.70,
+        3: 25.70,
+        4: 25.70,
+        5: 27.72,
+        6: 27.59
       },
       edinburgh: {
-        0: 24.90, // Sunday
-        1: 22.50, // Monday
-        2: 22.50, // Tuesday
-        3: 23.50, // Wednesday
-        4: 24.50, // Thursday
-        5: 27.80, // Friday
-        6: 28.20  // Saturday
+        0: 24.90,
+        1: 22.50,
+        2: 22.50,
+        3: 23.50,
+        4: 24.50,
+        5: 27.80,
+        6: 28.20
       },
       newcastle: {
-        0: 26.74, // Sunday (Glasgow placeholder)
-        1: 25.70, // Monday (Glasgow placeholder)
-        2: 25.70, // Tuesday (Glasgow placeholder)
-        3: 25.70, // Wednesday (Glasgow placeholder)
-        4: 25.70, // Thursday (Glasgow placeholder)
-        5: 27.72, // Friday (Glasgow placeholder)
-        6: 27.59  // Saturday (Glasgow placeholder)
+        0: 26.74,
+        1: 25.70,
+        2: 25.70,
+        3: 25.70,
+        4: 25.70,
+        5: 27.72,
+        6: 27.59
       }
     };
     
     return revenueByVenue[venue]?.[dayOfWeek] || 25.00;
   };
 
-  // Legacy fallback for backward compatibility
   const revenuePerCoverByDay = {
-    0: 26.74, // Sunday
-    1: 25.70, // Monday
-    2: 25.70, // Tuesday
-    3: 25.70, // Wednesday
-    4: 25.70, // Thursday
-    5: 27.72, // Friday
-    6: 27.59  // Saturday
+    0: 26.74,
+    1: 25.70,
+    2: 25.70,
+    3: 25.70,
+    4: 25.70,
+    5: 27.72,
+    6: 27.59
   };
 
   const [user, setUser] = useState(null);
@@ -287,78 +304,68 @@ const Glasgow14DayForecast = () => {
   const [loadingWeather, setLoadingWeather] = useState(false);
   const [weatherLastUpdated, setWeatherLastUpdated] = useState(null);
 
-  // Minimum daily budgets (includes kitchen staff) - VENUE SPECIFIC
   let minimumDailyBudgets;
   if (venue === 'edinburgh') {
-    // Edinburgh: Wednesday budget same as Thursday
     minimumDailyBudgets = {
-      0: 700,  // Sunday
-      1: 131,  // Monday (fixed)
-      2: 131,  // Tuesday (fixed)
-      3: 600,  // Wednesday (includes Â£100 manager time)
-      4: 500,  // Thursday
-      5: 800,  // Friday
-      6: 1000  // Saturday
+      0: 700,
+      1: 131,
+      2: 131,
+      3: 600,
+      4: 500,
+      5: 800,
+      6: 1000
     };
   } else if (venue === 'newcastle') {
-    // Newcastle: Open every day from 11am, no private hire alerts
     minimumDailyBudgets = {
-      0: 1000, // Sunday
-      1: 750,  // Monday
-      2: 750,  // Tuesday
-      3: 750,  // Wednesday
-      4: 750,  // Thursday
-      5: 1000, // Friday
-      6: 1600  // Saturday
+      0: 1000,
+      1: 750,
+      2: 750,
+      3: 750,
+      4: 750,
+      5: 1000,
+      6: 1600
     };
   } else {
-    // Glasgow & Newcastle: Original budgets
     minimumDailyBudgets = {
-      0: 700,  // Sunday
-      1: 131,  // Monday (fixed)
-      2: 131,  // Tuesday (fixed)
-      3: 200,  // Wednesday (fixed)
-      4: 500,  // Thursday
-      5: 800,  // Friday
-      6: 1000  // Saturday
+      0: 700,
+      1: 131,
+      2: 131,
+      3: 200,
+      4: 500,
+      5: 800,
+      6: 1000
     };
   }
 
-  // Get venue-specific multipliers
   const forecastMultipliers = VENUE_MULTIPLIERS[venue] || VENUE_MULTIPLIERS.glasgow;
 
-  // Staff hours calculation by day - VENUE SPECIFIC
   let staffHoursTemplates;
   if (venue === 'edinburgh') {
-    // Edinburgh: Wednesday is now open like Thursday
     staffHoursTemplates = {
       0: { baseHours: 40, perCover: 0.11 },
       1: { baseHours: 0, perCover: 0 },
       2: { baseHours: 0, perCover: 0 },
-      3: { baseHours: 25, perCover: 0.05 }, // Wednesday - open like Thursday
+      3: { baseHours: 25, perCover: 0.05 },
       4: { baseHours: 25, perCover: 0.05 },
       5: { baseHours: 40, perCover: 0.16 },
       6: { baseHours: 80, perCover: 0.16 }
     };
   } else if (venue === 'newcastle') {
-    // Newcastle: Open 7 days/week, using Glasgow staffing model
-    // Mon/Tue/Wed follow same template as Thursday (since using Thursday multipliers)
     staffHoursTemplates = {
-      0: { baseHours: 40, perCover: 0.11 },  // Sunday (Glasgow model)
-      1: { baseHours: 25, perCover: 0.05 },  // Monday (Glasgow Thursday model)
-      2: { baseHours: 25, perCover: 0.05 },  // Tuesday (Glasgow Thursday model)
-      3: { baseHours: 25, perCover: 0.05 },  // Wednesday (Glasgow Thursday model)
-      4: { baseHours: 25, perCover: 0.05 },  // Thursday (Glasgow)
-      5: { baseHours: 40, perCover: 0.16 },  // Friday (Glasgow)
-      6: { baseHours: 80, perCover: 0.16 }   // Saturday (Glasgow)
+      0: { baseHours: 40, perCover: 0.11 },
+      1: { baseHours: 25, perCover: 0.05 },
+      2: { baseHours: 25, perCover: 0.05 },
+      3: { baseHours: 25, perCover: 0.05 },
+      4: { baseHours: 25, perCover: 0.05 },
+      5: { baseHours: 40, perCover: 0.16 },
+      6: { baseHours: 80, perCover: 0.16 }
     };
   } else {
-    // Glasgow: Wednesday is closed
     staffHoursTemplates = {
       0: { baseHours: 40, perCover: 0.11 },
       1: { baseHours: 0, perCover: 0 },
       2: { baseHours: 0, perCover: 0 },
-      3: { baseHours: 0, perCover: 0 },     // Wednesday - CLOSED
+      3: { baseHours: 0, perCover: 0 },
       4: { baseHours: 25, perCover: 0.05 },
       5: { baseHours: 40, perCover: 0.16 },
       6: { baseHours: 80, perCover: 0.16 }
@@ -371,8 +378,6 @@ const Glasgow14DayForecast = () => {
     if (daysUntil >= 7) return multipliers.day7;
     if (daysUntil >= 3) return multipliers.day3;
     if (daysUntil >= 1) return multipliers.day1;
-    // For same-day (daysUntil === 0), use day1 multiplier since data is at 8am
-    // Still significant walk-ins and same-day bookings expected
     return multipliers.day1;
   };
 
@@ -425,16 +430,10 @@ const Glasgow14DayForecast = () => {
     }
   }, []);
 
-  // ========================================================================
-  // AUTO-FETCH WEATHER WHEN FORECASTS LOAD
-  // ========================================================================
-  
   useEffect(() => {
     if (forecasts.length > 0 && !weatherData && !loadingWeather) {
-      // Automatically fetch weather when we have forecasts
       handleAutoFetchWeather();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forecasts.length]);
 
   const handleAutoFetchWeather = async () => {
@@ -445,30 +444,17 @@ const Glasgow14DayForecast = () => {
       setWeatherData(weather);
       setWeatherLastUpdated(new Date());
       
-      // Helper: Get consistent date string (YYYY-MM-DD) in local time
-      const getDateString = (date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-      
-      // Update forecasts with weather
       const updatedForecasts = forecasts.map(day => {
         const dateKey = getDateString(day.date);
         const weatherInfo = weather[dateKey];
         
-        // Always attach weather info if available
         if (weatherInfo) {
           let weatherMult = 1.0;
           let weatherAdjustedCovers = day.forecastCovers;
           
-          // Only calculate weather adjustment if not a closed day or private function
           if (!day.isPotentialPrivateFunction && !day.isClosed) {
             weatherMult = getWeatherMultiplier(day.dayName, weatherInfo.precipitation_mm, weatherInfo.temp_max);
             
-            // Weather multiplier applies only to additional covers (walk-ins/late bookings)
-            // not to confirmed bookings
             const additionalCovers = Math.max(0, day.forecastCovers - day.currentCovers);
             const weatherAdjustedAdditional = Math.round(additionalCovers * weatherMult);
             weatherAdjustedCovers = day.currentCovers + weatherAdjustedAdditional;
@@ -488,7 +474,7 @@ const Glasgow14DayForecast = () => {
       });
       
       setForecasts(updatedForecasts);
-      setShowWeatherInfo(true); // Auto-show weather columns when loaded
+      setShowWeatherInfo(true);
     }
     
     setLoadingWeather(false);
@@ -518,15 +504,7 @@ const Glasgow14DayForecast = () => {
       const amountCol = headers.findIndex(h => h === 'amount');
       const emailCol = headers.findIndex(h => h === 'email');
       const usernameCol = headers.findIndex(h => h === 'username');
-      const venueCol = headers.findIndex(h => h === 'venue');
-      
-      // Map selected venue to expected venue name in CSV
-      const venueNameMap = {
-        glasgow: 'Fayre Play Glasgow',
-        edinburgh: 'Fayre Play Edinburgh',
-        newcastle: 'Fayre Play Newcastle'
-      };
-      const selectedVenueName = venueNameMap[venue];
+      const venueCol = headers.findIndex(h => h.toLowerCase() === 'venue' || h.toLowerCase() === 'location' || h.toLowerCase() === 'site');
       
       if (dateCol === -1 || peopleCol === -1) {
         setError(`CSV columns not found. Found: ${headers.join(', ')}`);
@@ -535,6 +513,21 @@ const Glasgow14DayForecast = () => {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+
+      // ========================================================================
+      // CRITICAL FIX: Get Monday of current week
+      // This ensures we only show current week + next week, never prior weeks
+      // ========================================================================
+      const mondayThisWeek = getMondayOfWeek(today);
+      const sundayThisWeek = new Date(mondayThisWeek);
+      sundayThisWeek.setDate(sundayThisWeek.getDate() + 6);
+      sundayThisWeek.setHours(23, 59, 59, 999);
+
+      const mondayNextWeek = new Date(mondayThisWeek);
+      mondayNextWeek.setDate(mondayNextWeek.getDate() + 7);
+      const sundayNextWeek = new Date(mondayNextWeek);
+      sundayNextWeek.setDate(sundayNextWeek.getDate() + 6);
+      sundayNextWeek.setHours(23, 59, 59, 999);
 
       const bookingsByDate = {};
       
@@ -572,16 +565,19 @@ const Glasgow14DayForecast = () => {
         const status = statusCol !== -1 ? row[statusCol].toLowerCase() : 'active';
         const email = emailCol !== -1 ? row[emailCol].toLowerCase() : '';
         const username = usernameCol !== -1 ? row[usernameCol].toLowerCase() : '';
-        const bookingVenue = venueCol !== -1 ? row[venueCol].trim() : '';
-
-        // FILTER: Only include bookings for the selected venue
-        if (selectedVenueName && bookingVenue !== selectedVenueName) {
-          continue;
-        }
 
         // FILTER: Skip test data
         if (email.includes('test') || username.includes('test')) {
           continue;
+        }
+
+        // FILTER: Only include bookings for selected venue
+        if (venueCol !== -1) {
+          const bookingVenue = row[venueCol].toLowerCase().trim();
+          // Check if the booking venue matches the selected venue
+          if (!bookingVenue.includes(venue.toLowerCase())) {
+            continue;
+          }
         }
 
         if (status !== 'active') continue;
@@ -601,15 +597,19 @@ const Glasgow14DayForecast = () => {
           
           if (isNaN(eventDate.getTime())) continue;
           
+          // ========================================================================
+          // NEW FILTER: Only include bookings from this week or next week
+          // Skip any prior week bookings (which can happen due to export glitches)
+          // ========================================================================
+          if (eventDate < mondayThisWeek || eventDate > sundayNextWeek) {
+            continue;
+          }
+          
           const bookingHour = eventDate.getHours();
           const groupDate = new Date(eventDate);
           groupDate.setHours(0, 0, 0, 0);
           
-          // Use consistent local date format (not toISOString which converts to UTC)
-          const year = groupDate.getFullYear();
-          const month = String(groupDate.getMonth() + 1).padStart(2, '0');
-          const day = String(groupDate.getDate()).padStart(2, '0');
-          const dateKey = `${year}-${month}-${day}`;
+          const dateKey = getDateString(groupDate);
           
           if (!bookingsByDate[dateKey]) {
             bookingsByDate[dateKey] = {
@@ -637,34 +637,25 @@ const Glasgow14DayForecast = () => {
         
         const daysUntil = Math.round((eventDate - today) / (1000 * 60 * 60 * 24));
         
-        // Include past dates (this week) + future dates (up to 14 days)
-        if (daysUntil <= 14) {
+        // Only include within this week + next week
+        if (daysUntil >= -6 && daysUntil <= 13) {
           const dayOfWeek = eventDate.getDay();
           
-          // For PAST dates (before today): don't apply multiplier - they're confirmed
-          // For TODAY and FUTURE: apply multiplier for forecast/walk-ins
           const isPastDate = eventDate < today;
           let multiplier = 1.0;
           let forecastCovers = data.covers;
           
           if (!isPastDate) {
-            // Apply multiplier for TODAY onwards (accounts for walk-ins and late bookings)
             multiplier = calculateMultiplier(dayOfWeek, daysUntil);
             forecastCovers = Math.round(data.covers * multiplier);
           }
           
-          // For FUTURE dates (tomorrow onwards): check if it looks like a private function
-          // For PAST dates and TODAY: Never mark as private (they're actual/current events)
           let isPotentialPrivateFunction = false;
           
           if (daysUntil > 0 && venue !== 'newcastle') {
-            // Only mark as private if bookings are on NORMALLY CLOSED DAYS
-            // Glasgow: Mon-Wed (days 1-3) are normally closed
-            // Edinburgh: Mon-Tue (days 1-2) are normally closed (Wed now open like Thu)
-            // Newcastle: NEVER private (open every day from 11am)
-            let normallyClosedDays = [1, 2, 3]; // Default: Mon, Tue, Wed
+            let normallyClosedDays = [1, 2, 3];
             if (venue === 'edinburgh') {
-              normallyClosedDays = [1, 2]; // Edinburgh: only Mon, Tue closed (Wed now open)
+              normallyClosedDays = [1, 2];
             }
             const isNormallyClosed = normallyClosedDays.includes(dayOfWeek);
             isPotentialPrivateFunction = isNormallyClosed;
@@ -672,13 +663,11 @@ const Glasgow14DayForecast = () => {
           
           const currentCovers = data.covers;
           
-          // Override if private function
           if (isPotentialPrivateFunction) {
             multiplier = 1.0;
             forecastCovers = currentCovers;
           }
           
-          // Cap forecast at venue maximum capacity
           const venueCapacity = VENUE_CAPACITIES[venue];
           const wasCapped = forecastCovers > venueCapacity;
           if (venueCapacity && forecastCovers > venueCapacity) {
@@ -695,11 +684,9 @@ const Glasgow14DayForecast = () => {
           const laborCost = staffHours * HOURLY_RATE;
           const laborPct = revenue > 0 ? (laborCost / revenue * 100) : 0;
           
-          // Calculate budget: use the maximum of calculated labor cost or minimum budget
           const minimumBudget = minimumDailyBudgets[dayOfWeek];
           const budgetRequired = Math.max(laborCost, minimumBudget);
           
-          // Determine if this is a past date (for styling)
           const isPast = eventDate < today;
 
           parsedData.push({
@@ -736,36 +723,29 @@ const Glasgow14DayForecast = () => {
 
       parsedData.sort((a, b) => a.date - b.date);
 
-      // Add missing closed days (Mon-Wed) that have no bookings but need manager budget
       const result = [];
       const allDates = new Set();
       
-      // Track all dates that are already in parsedData
       parsedData.forEach(day => {
-        const dateStr = day.date.toISOString().split('T')[0];
+        const dateStr = getDateString(day.date);
         allDates.add(dateStr);
       });
 
-      // Fill in any missing dates for the next 14 days
-      for (let i = 0; i <= 14; i++) {
+      // Fill in missing dates for this week + next week only
+      for (let i = -6; i <= 13; i++) {
         const checkDate = new Date(today);
         checkDate.setDate(checkDate.getDate() + i);
         checkDate.setHours(0, 0, 0, 0);
         
         const dayOfWeek = checkDate.getDay();
-        const dateStr = checkDate.toISOString().split('T')[0];
+        const dateStr = getDateString(checkDate);
         
-        // Check if this date is already in results
         if (!allDates.has(dateStr)) {
-          // Only add closed days that don't have bookings
-          // Glasgow: Mon-Wed (days 1-3) are normally closed
-          // Edinburgh: Mon-Tue (days 1-2) are normally closed (Wed now open like Thu)
-          // Newcastle: NEVER closed (open 7 days/week)
-          let normallyClosedDays = [1, 2, 3]; // Default: Mon, Tue, Wed
+          let normallyClosedDays = [1, 2, 3];
           if (venue === 'edinburgh') {
-            normallyClosedDays = [1, 2]; // Edinburgh: only Mon, Tue closed (Wed now open)
+            normallyClosedDays = [1, 2];
           } else if (venue === 'newcastle') {
-            normallyClosedDays = []; // Newcastle: open 7 days/week, never closed
+            normallyClosedDays = [];
           }
           
           if (normallyClosedDays.includes(dayOfWeek)) {
@@ -799,11 +779,10 @@ const Glasgow14DayForecast = () => {
         }
       }
 
-      // Merge the two arrays and sort
       const finalForecasts = [...parsedData, ...result].sort((a, b) => a.date - b.date);
       setForecasts(finalForecasts);
       setUploadedData(file.name);
-      setWeatherData(null); // Reset weather so it auto-fetches
+      setWeatherData(null);
 
     } catch (err) {
       setError(`Error reading file: ${err.message}`);
@@ -891,7 +870,7 @@ const Glasgow14DayForecast = () => {
           <div className="text-center mb-8">
             <Calendar size={48} className="mx-auto mb-4 text-indigo-600" />
             <h1 className="text-3xl font-bold text-gray-900">Glasgow Forecast</h1>
-            <p className="text-gray-600 mt-2">14-Day Staffing & Revenue Forecast</p>
+            <p className="text-gray-600 mt-2">14-Day Staffing and Revenue Forecast</p>
           </div>
           
           {loginError && (
@@ -953,7 +932,6 @@ const Glasgow14DayForecast = () => {
         </div>
       </div>
 
-      {/* Upload Section */}
       <div className="bg-white rounded-lg border-2 border-dashed border-indigo-300 p-8 text-center mb-6">
         <Upload size={48} className="mx-auto mb-4 text-indigo-600" />
         <h3 className="text-lg font-semibold mb-2">Upload Booking Data</h3>
@@ -977,11 +955,10 @@ const Glasgow14DayForecast = () => {
 
         {uploadedData && (
           <div className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3">
-            âœ“ Loaded: {uploadedData}
+            [OK] Loaded: {uploadedData}
           </div>
         )}
 
-        {/* Weather Status - Enhanced Indicator */}
         {forecasts.length > 0 && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center justify-center gap-2">
@@ -992,11 +969,11 @@ const Glasgow14DayForecast = () => {
             {loadingWeather ? (
               <div className="mt-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded p-3 flex items-center justify-center gap-2">
                 <RefreshCw size={16} className="animate-spin" />
-                â³ Fetching weather from Open-Meteo API...
+                Loading weather from Open-Meteo API...
               </div>
             ) : weatherData && Object.keys(weatherData).length > 0 ? (
               <div className="mt-3 text-sm bg-green-50 border-2 border-green-300 rounded p-3">
-                <div className="text-green-800 font-semibold">âœ… Weather Data Loaded Successfully!</div>
+                <div className="text-green-800 font-semibold">[OK] Weather Data Loaded Successfully</div>
                 <div className="text-green-700 text-xs mt-1">
                   {Object.keys(weatherData).length} days of data ready
                   {weatherLastUpdated && (
@@ -1006,12 +983,12 @@ const Glasgow14DayForecast = () => {
                   )}
                 </div>
                 <div className="text-green-700 text-xs mt-2 font-semibold">
-                  âžœ Weather columns are now visible in the tables above
+                  Weather columns are now visible in the tables above
                 </div>
               </div>
             ) : !loadingWeather ? (
               <div className="mt-3 text-sm bg-red-50 border-2 border-red-300 rounded p-3">
-                <div className="text-red-800 font-semibold">âš ï¸ Weather Data Not Yet Loaded</div>
+                <div className="text-red-800 font-semibold">[WARNING] Weather Data Not Yet Loaded</div>
                 <div className="text-red-700 text-xs mt-1">
                   Still waiting for weather API response...
                 </div>
@@ -1046,26 +1023,14 @@ const Glasgow14DayForecast = () => {
         </div>
       )}
 
-      {/* Results */}
       {forecasts.length > 0 && (
         <>
-          {/* Split by proper calendar weeks: Mon-Sun */}
           {(() => {
             if (forecasts.length === 0) return null;
             
-            // Helper: Get Monday of the week for a given date
-            const getMondayOfWeek = (date) => {
-              const d = new Date(date);
-              const day = d.getDay();
-              const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-              return new Date(d.setDate(diff));
-            };
-            
-            // Get today's date
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            // Helper: Create array of all days in a week
             const getWeekDays = (monday) => {
               const days = [];
               for (let i = 0; i < 7; i++) {
@@ -1076,37 +1041,25 @@ const Glasgow14DayForecast = () => {
               return days;
             };
             
-            // Get the first day in forecasts
-            const firstDay = forecasts[0];
-            const firstMonday = getMondayOfWeek(firstDay.date);
+            // CRITICAL: Use TODAY's date to calculate Monday, not the first booking date
+            // This ensures we always show "This Week" starting from Monday of the current week
+            const firstMonday = getMondayOfWeek(today);
             
-            // Helper: Get consistent date string (YYYY-MM-DD) in local time
-            const getDateString = (date) => {
-              const year = date.getFullYear();
-              const month = String(date.getMonth() + 1).padStart(2, '0');
-              const day = String(date.getDate()).padStart(2, '0');
-              return `${year}-${month}-${day}`;
-            };
-            
-            // Create a map of forecasts by date string
             const forecastMap = {};
             forecasts.forEach(day => {
               const dateStr = getDateString(day.date);
               forecastMap[dateStr] = day;
             });
             
-            // Helper: Is date in past?
             const isPastDate = (date) => {
               const d = new Date(date);
               d.setHours(0, 0, 0, 0);
               return d < today;
             };
             
-            // Generate full weeks
             let currentMonday = new Date(firstMonday);
             const allWeeks = [];
             
-            // Generate weeks - get at least 2 weeks of data
             for (let weekNum = 0; weekNum < 3; weekNum++) {
               const weekDays = getWeekDays(currentMonday);
               const weekData = weekDays.map(date => {
@@ -1149,7 +1102,6 @@ const Glasgow14DayForecast = () => {
             const thisWeek = allWeeks[0]?.days || [];
             const nextWeek = allWeeks[1]?.days || [];
             
-            // Format week label
             const formatWeekLabel = (mondayDate) => {
               const sunday = new Date(mondayDate);
               sunday.setDate(sunday.getDate() + 6);
@@ -1160,11 +1112,10 @@ const Glasgow14DayForecast = () => {
             
             return (
               <>
-                {/* THIS WEEK TABLE */}
                 {thisWeek.length > 0 && allWeeks.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold">📅 This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
+                      <h2 className="text-2xl font-bold">This Week ({formatWeekLabel(allWeeks[0].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
                         className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
@@ -1185,15 +1136,8 @@ const Glasgow14DayForecast = () => {
                             <th className="px-2 md:px-3 py-2 text-center">Forecast</th>
                             {showWeatherInfo && (
                               <>
-                                <th className="px-2 md:px-3 py-2 text-center">
-                                  <Cloud size={14} className="mx-auto mb-0.5" />
-                                  Rain (mm)
-                                </th>
-                                <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
-                                  <br />
-                                  Temp (Â°C)
-                                </th>
+                                <th className="px-2 md:px-3 py-2 text-center">Rain (mm)</th>
+                                <th className="px-2 md:px-3 py-2 text-center">Temp (C)</th>
                                 <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
                                 <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
                               </>
@@ -1223,8 +1167,8 @@ const Glasgow14DayForecast = () => {
                                 </span>
                               </td>
                               <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
-                              <td className="px-2 md:px-3 py-2 text-center text-xs">×{day.multiplier.toFixed(2)}</td>
-                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>âš </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">x{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>[CAP]</span>}</span></td>
                               {showWeatherInfo && (
                                 <>
                                   <td className="px-2 md:px-3 py-2 text-center font-bold">
@@ -1244,7 +1188,7 @@ const Glasgow14DayForecast = () => {
                                   <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
-                                        ×{day.weatherMultiplier.toFixed(2)}
+                                        x{day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
@@ -1254,8 +1198,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">GBP {day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">GBP {(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1269,11 +1213,10 @@ const Glasgow14DayForecast = () => {
                   </div>
                 )}
 
-                {/* NEXT WEEK TABLE */}
                 {nextWeek.length > 0 && allWeeks.length > 1 && (
                   <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold">📅 Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
+                      <h2 className="text-2xl font-bold">Next Week ({formatWeekLabel(allWeeks[1].monday)})</h2>
                       <button
                         onClick={() => setShowWeatherInfo(!showWeatherInfo)}
                         className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition flex items-center gap-1"
@@ -1294,15 +1237,8 @@ const Glasgow14DayForecast = () => {
                             <th className="px-2 md:px-3 py-2 text-center">Forecast</th>
                             {showWeatherInfo && (
                               <>
-                                <th className="px-2 md:px-3 py-2 text-center">
-                                  <Cloud size={14} className="mx-auto mb-0.5" />
-                                  Rain (mm)
-                                </th>
-                                <th className="px-2 md:px-3 py-2 text-center">
-                                  ðŸŒ¡ï¸Â
-                                  <br />
-                                  Temp (Â°C)
-                                </th>
+                                <th className="px-2 md:px-3 py-2 text-center">Rain (mm)</th>
+                                <th className="px-2 md:px-3 py-2 text-center">Temp (C)</th>
                                 <th className="px-2 md:px-3 py-2 text-center">W.Mult</th>
                                 <th className="px-2 md:px-3 py-2 text-center">Adj.</th>
                               </>
@@ -1332,8 +1268,8 @@ const Glasgow14DayForecast = () => {
                                 </span>
                               </td>
                               <td className="px-2 md:px-3 py-2 text-center font-medium">{day.currentCovers}</td>
-                              <td className="px-2 md:px-3 py-2 text-center text-xs">×{day.multiplier.toFixed(2)}</td>
-                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>âš </span>}</span></td>
+                              <td className="px-2 md:px-3 py-2 text-center text-xs">x{day.multiplier.toFixed(2)}</td>
+                              <td className="px-2 md:px-3 py-2 text-center font-bold"><span className={day.wasCapped ? 'text-red-700' : 'text-indigo-700'}>{day.forecastCovers}{day.wasCapped && <span className="ml-1 font-bold" title={`Exceeds capacity of ${day.venueCapacity}`}>[CAP]</span>}</span></td>
                               {showWeatherInfo && (
                                 <>
                                   <td className="px-2 md:px-3 py-2 text-center font-bold">
@@ -1353,7 +1289,7 @@ const Glasgow14DayForecast = () => {
                                   <td className="px-2 md:px-3 py-2 text-center">
                                     {day.weatherMultiplier ? (
                                       <span className={day.weatherMultiplier > 1 ? 'text-green-700 font-bold' : day.weatherMultiplier < 1 ? 'text-red-700 font-bold' : 'text-gray-600'}>
-                                        ×{day.weatherMultiplier.toFixed(2)}
+                                        x{day.weatherMultiplier.toFixed(2)}
                                       </span>
                                     ) : '-'}
                                   </td>
@@ -1363,8 +1299,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">GBP {day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">GBP {(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1381,7 +1317,6 @@ const Glasgow14DayForecast = () => {
             );
           })()}
 
-          {/* Weekly Summaries */}
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Weekly Summaries</h2>
             {weeklySummaries.map((week, idx) => (
@@ -1404,12 +1339,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Required Budget</div>
-                    <div className="text-xl font-bold text-blue-700">Â£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className="text-xs text-gray-500">Actual: Â£{week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xl font-bold text-blue-700">GBP {(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: GBP {week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Revenue</div>
-                    <div className="text-xl font-bold">Â£{week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xl font-bold">GBP {week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
@@ -1422,12 +1357,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    Â£{(week.totalRevenue * 0.25).toFixed(0)} for 25%
+                    GBP {(week.totalRevenue * 0.25).toFixed(0)} for 25%
                     {week.laborPct <= 25 && (
-                      <span className="text-green-700 ml-2">âœ“ Under budget</span>
+                      <span className="text-green-700 ml-2">[OK] Under budget</span>
                     )}
                     {week.laborPct > 25 && (
-                      <span className="text-red-700 ml-2">âš   Over budget</span>
+                      <span className="text-red-700 ml-2">[WARNING] Over budget</span>
                     )}
                   </div>
                 </div>
