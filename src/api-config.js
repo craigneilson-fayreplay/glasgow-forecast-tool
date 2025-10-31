@@ -1,160 +1,159 @@
-// ============================================================================
-// BOOKED.IT API CONFIGURATION
-// ============================================================================
+// Booked.it API Configuration - CORRECTED VERSION
 
-export const API_CONFIG = {
-  BASE_URL: 'https://api.booked.it',
-  ENDPOINTS: {
-    LOGIN: '/api/v1/user/login',
-    BOOKINGS: '/api/v1/bookings',
-    VENUES: '/api/v1/venues'
-  }
-};
-
-export const VENUES = {
-  newcastle: { id: 225, name: 'Fayre Play Newcastle' },
-  glasgow: { id: 226, name: 'Fayre Play Glasgow' },
-  edinburgh: { id: 227, name: 'Fayre Play Edinburgh' }
-};
-
-// ============================================================================
-// STORAGE KEYS
-// ============================================================================
-
-export const STORAGE_KEYS = {
-  API_TOKEN: 'booked_it_api_token',
-  TOKEN_EXPIRY: 'booked_it_token_expiry',
-  LAST_FETCH: 'forecast_last_fetch'
-};
-
-// ============================================================================
-// API HELPER FUNCTIONS
-// ============================================================================
+const BOOKED_IT_BASE_URL = 'https://www.bookedjs.com/api';
 
 /**
- * Login to Booked.it API and return bearer token
- * @param {string} email - User email
- * @param {string} password - User password
- * @returns {Promise<{token: string, expiresIn: number}>}
+ * Authenticate with Booked.it using email and password
+ * Returns booking data if successful
  */
-export const loginToBookedIt = async (email, password) => {
+export const authenticateBooked = async (email, password) => {
   try {
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGIN}?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+    // Encode credentials in Base64 for Basic Auth
+    const credentials = btoa(`${email}:${password}`);
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Login failed: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    // Store token and expiry
-    const expiryTime = Date.now() + (data.expiresIn * 1000);
-    localStorage.setItem(STORAGE_KEYS.API_TOKEN, data.token);
-    localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString());
-    
-    return {
-      token: data.token,
-      expiresIn: data.expiresIn
-    };
-  } catch (error) {
-    throw new Error(`Failed to login: ${error.message}`);
-  }
-};
-
-/**
- * Check if stored token is still valid
- * @returns {boolean}
- */
-export const isTokenValid = () => {
-  const token = localStorage.getItem(STORAGE_KEYS.API_TOKEN);
-  const expiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
-  
-  if (!token || !expiry) return false;
-  
-  return Date.now() < parseInt(expiry);
-};
-
-/**
- * Get valid API token, refreshing if needed
- * @param {string} email - User email (needed for refresh)
- * @param {string} password - User password (needed for refresh)
- * @returns {Promise<string>}
- */
-export const getValidToken = async (email, password) => {
-  if (isTokenValid()) {
-    return localStorage.getItem(STORAGE_KEYS.API_TOKEN);
-  }
-  
-  // Token expired, login again
-  const result = await loginToBookedIt(email, password);
-  return result.token;
-};
-
-/**
- * Fetch bookings from Booked.it API for a venue
- * @param {number} venueId - Provider ID (225, 226, or 227)
- * @param {string} token - API bearer token
- * @param {Date} startDate - Start date for booking filter
- * @param {Date} endDate - End date for booking filter
- * @returns {Promise<Array>}
- */
-export const fetchBookingsFromAPI = async (venueId, token, startDate, endDate) => {
-  try {
-    // Format dates as YYYY-MM-DD
-    const formatDate = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const start = formatDate(startDate);
-    const end = formatDate(endDate);
-
-    const url = new URL(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS}`);
-    url.searchParams.append('provider_id', venueId);
-    url.searchParams.append('start_date', start);
-    url.searchParams.append('end_date', end);
-    url.searchParams.append('status', 'active'); // Only active bookings
-
-    const response = await fetch(url.toString(), {
+    const response = await fetch(`${BOOKED_IT_BASE_URL}/bookings`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       }
     });
 
+    if (response.status === 401) {
+      throw new Error('Invalid credentials. Please check your email and password.');
+    }
+
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Unauthorized - token may have expired');
-      }
-      throw new Error(`API error: ${response.statusText}`);
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
-    // Update last fetch timestamp
-    localStorage.setItem(STORAGE_KEYS.LAST_FETCH, new Date().toISOString());
-    
-    return data.bookings || [];
+    return data;
+
   } catch (error) {
-    throw new Error(`Failed to fetch bookings: ${error.message}`);
+    console.error('Authentication error:', error);
+    throw error;
   }
 };
 
 /**
- * Clear stored credentials (logout)
+ * Fetch bookings for a specific date range
  */
-export const clearStoredCredentials = () => {
-  localStorage.removeItem(STORAGE_KEYS.API_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
-  localStorage.removeItem(STORAGE_KEYS.LAST_FETCH);
+export const fetchBookingsByDateRange = async (email, password, startDate, endDate) => {
+  try {
+    const credentials = btoa(`${email}:${password}`);
+    
+    // Format dates as YYYY-MM-DD if they're Date objects
+    const start = startDate instanceof Date ? startDate.toISOString().split('T')[0] : startDate;
+    const end = endDate instanceof Date ? endDate.toISOString().split('T')[0] : endDate;
+
+    const response = await fetch(
+      `${BOOKED_IT_BASE_URL}/bookings?start=${start}&end=${end}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    return await response.json();
+
+  } catch (error) {
+    console.error('Error fetching bookings by date range:', error);
+    throw error;
+  }
+};
+
+/**
+ * Export bookings as CSV format (for compatibility)
+ */
+export const exportBookingsAsCSV = (bookings) => {
+  try {
+    if (!bookings || bookings.length === 0) {
+      return '';
+    }
+
+    // Extract headers from first booking
+    const headers = Object.keys(bookings[0]);
+    
+    // Create CSV content
+    let csv = headers.join(',') + '\n';
+    bookings.forEach(booking => {
+      const values = headers.map(header => {
+        const value = booking[header];
+        // Escape quotes and wrap in quotes if contains comma
+        if (typeof value === 'string' && value.includes(',')) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      });
+      csv += values.join(',') + '\n';
+    });
+
+    return csv;
+
+  } catch (error) {
+    console.error('Error exporting bookings as CSV:', error);
+    throw error;
+  }
+};
+
+/**
+ * Validate Booked.it credentials
+ */
+export const validateCredentials = async (email, password) => {
+  try {
+    const credentials = btoa(`${email}:${password}`);
+    
+    const response = await fetch(`${BOOKED_IT_BASE_URL}/bookings?limit=1`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    return response.status === 200;
+
+  } catch (error) {
+    console.error('Error validating credentials:', error);
+    return false;
+  }
+};
+
+/**
+ * Parse Booked.it booking data to forecast format
+ */
+export const parseBookingsForForecast = (bookings) => {
+  try {
+    if (!Array.isArray(bookings)) {
+      console.warn('Bookings is not an array:', bookings);
+      return [];
+    }
+
+    return bookings.map(booking => ({
+      date: booking.date || booking.event_date || booking.booking_date,
+      people: booking.people || booking.guests || booking.party_size || 0,
+      status: booking.status || 'active',
+      user_id: booking.user_id || booking.customer_id || null,
+      email: booking.email || booking.customer_email || '',
+      username: booking.username || booking.customer_name || '',
+      amount: booking.amount || booking.price || 0,
+      venue: booking.venue || booking.location || '',
+      name: booking.name || booking.customer_name || ''
+    }));
+
+  } catch (error) {
+    console.error('Error parsing bookings for forecast:', error);
+    return [];
+  }
 };
