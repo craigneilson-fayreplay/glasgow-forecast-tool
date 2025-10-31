@@ -2,7 +2,7 @@
 
 const BOOKED_IT_BASE_URL = 'https://www.bookedjs.com/api';
 
-export const loginToBooked = async (email, password) => {
+export const loginToBookedIt = async (email, password) => {
   try {
     const credentials = btoa(`${email}:${password}`);
     
@@ -29,7 +29,7 @@ export const loginToBooked = async (email, password) => {
   }
 };
 
-export const fetchBookingsAPI = async (email, password, startDate, endDate) => {
+export const fetchBookingsFromAPI = async (email, password, startDate, endDate) => {
   try {
     const credentials = btoa(`${email}:${password}`);
     
