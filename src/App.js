@@ -879,9 +879,10 @@ const Glasgow14DayForecast = () => {
   }, [forecasts]);
 
   const getStatusColor = (pct) => {
+    const targetPct = getTargetLaborPct();
     if (pct === 0) return 'text-gray-400 bg-gray-100';
-    if (pct <= 25) return 'text-green-700 bg-green-100';
-    if (pct <= 30) return 'text-amber-700 bg-amber-100';
+    if (pct <= targetPct) return 'text-green-700 bg-green-100';
+    if (pct <= targetPct + 5) return 'text-amber-700 bg-amber-100';
     return 'text-red-700 bg-red-100';
   };
 
@@ -1232,8 +1233,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1333,8 +1334,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1373,12 +1374,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Required Budget</div>
-                    <div className="text-xl font-bold text-blue-700">Â£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className="text-xs text-gray-500">Actual: Â£{week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xl font-bold text-blue-700">£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: £{week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Revenue</div>
-                    <div className="text-xl font-bold">Â£{week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xl font-bold">£{week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
@@ -1391,11 +1392,11 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    Â£{(week.totalRevenue * 0.25).toFixed(0)} for 25%
-                    {week.laborPct <= 25 && (
+                    £{(week.totalRevenue * (getTargetLaborPct() / 100)).toFixed(0)} for {getTargetLaborPct()}%
+                    {week.laborPct <= getTargetLaborPct() && (
                       <span className="text-green-700 ml-2">[OK] Under budget</span>
                     )}
-                    {week.laborPct > 25 && (
+                    {week.laborPct > getTargetLaborPct() && (
                       <span className="text-red-700 ml-2">[WARNING] Over budget</span>
                     )}
                   </div>
