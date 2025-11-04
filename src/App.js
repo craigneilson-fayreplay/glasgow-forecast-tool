@@ -337,6 +337,11 @@ const Glasgow14DayForecast = () => {
     };
   }
 
+  // Target labor % by venue - Newcastle has higher target due to being new
+  const getTargetLaborPct = () => {
+    return venue === 'newcastle' ? 30 : 25;
+  };
+
   const forecastMultipliers = VENUE_MULTIPLIERS[venue] || VENUE_MULTIPLIERS.glasgow;
 
   let staffHoursTemplates;
@@ -381,11 +386,28 @@ const Glasgow14DayForecast = () => {
     return multipliers.day1;
   };
 
-  const calculateStaffHours = (dayOfWeek, covers) => {
-    const template = staffHoursTemplates[dayOfWeek];
-    if (template.baseHours === 0) return 0;
-    const hours = Math.round(template.baseHours + (covers * template.perCover));
-    return hours + 3;
+  const calculateSmartForecast = (bookingsData, multiplier) => {
+    // Separate bookings into large groups (>10) and regular bookings (<=10)
+    const largeGroups = bookingsData.filter(booking => booking.people > 10);
+    const regularBookings = bookingsData.filter(booking => booking.people <= 10);
+    
+    // Calculate covers from each category
+    const largeGroupCovers = largeGroups.reduce((sum, b) => sum + b.people, 0);
+    const regularCovers = regularBookings.reduce((sum, b) => sum + b.people, 0);
+    
+    // Only apply multiplier to regular bookings (walk-ins + small bookings)
+    // Large groups are assumed to be locked in and won't multiply
+    const multipliedRegular = Math.round(regularCovers * multiplier);
+    
+    // Total forecast = multiplied regular covers + all large group covers
+    const totalForecast = multipliedRegular + largeGroupCovers;
+    
+    return {
+      totalForecast,
+      largeGroupCovers,
+      regularCovers,
+      multipliedRegular
+    };
   };
 
   const handleLoginSuccess = (credentialResponse) => {
@@ -616,13 +638,15 @@ const Glasgow14DayForecast = () => {
               date: new Date(groupDate),
               bookingCount: 0,
               covers: 0,
-              bookingHours: []
+              bookingHours: [],
+              bookings: [] // Track individual bookings for smart forecast
             };
           }
           
           bookingsByDate[dateKey].bookingCount++;
           bookingsByDate[dateKey].covers += people;
           bookingsByDate[dateKey].bookingHours.push(bookingHour);
+          bookingsByDate[dateKey].bookings.push({ people }); // Store individual booking
           
         } catch (e) {
           continue;
@@ -647,7 +671,10 @@ const Glasgow14DayForecast = () => {
           
           if (!isPastDate) {
             multiplier = calculateMultiplier(dayOfWeek, daysUntil);
-            forecastCovers = Math.round(data.covers * multiplier);
+            
+            // Use smart forecast to separate large groups from multiplier
+            const smartForecast = calculateSmartForecast(data.bookings, multiplier);
+            forecastCovers = smartForecast.totalForecast;
           }
           
           let isPotentialPrivateFunction = false;
@@ -1198,8 +1225,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1299,8 +1326,8 @@ const Glasgow14DayForecast = () => {
                                 </>
                               )}
                               <td className="px-2 md:px-3 py-2 text-center text-sm">{day.staffHours}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">£{day.budgetRequired.toFixed(0)}</td>
-                              <td className="px-2 md:px-3 py-2 text-right text-sm">£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm font-semibold text-blue-700">Â£{day.budgetRequired.toFixed(0)}</td>
+                              <td className="px-2 md:px-3 py-2 text-right text-sm">Â£{(day.revenueWithWeather || day.revenue).toFixed(0)}</td>
                               <td className="px-2 md:px-3 py-2 text-right">
                                 <span className={`px-1 py-0.5 rounded text-xs font-bold ${getStatusColor(day.laborPct)}`}>
                                   {day.laborPct.toFixed(0)}%
@@ -1339,12 +1366,12 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Required Budget</div>
-                    <div className="text-xl font-bold text-blue-700">£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
-                    <div className="text-xs text-gray-500">Actual: £{week.totalLaborCost.toFixed(0)}</div>
+                    <div className="text-xl font-bold text-blue-700">Â£{(week.totalBudgetRequired || 0).toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Actual: Â£{week.totalLaborCost.toFixed(0)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600 mb-1">Revenue</div>
-                    <div className="text-xl font-bold">£{week.totalRevenue.toFixed(0)}</div>
+                    <div className="text-xl font-bold">Â£{week.totalRevenue.toFixed(0)}</div>
                   </div>
                 </div>
 
@@ -1357,7 +1384,7 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    £{(week.totalRevenue * 0.25).toFixed(0)} for 25%
+                    Â£{(week.totalRevenue * 0.25).toFixed(0)} for 25%
                     {week.laborPct <= 25 && (
                       <span className="text-green-700 ml-2">[OK] Under budget</span>
                     )}
