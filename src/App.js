@@ -386,6 +386,13 @@ const Glasgow14DayForecast = () => {
     return multipliers.day1;
   };
 
+  const calculateStaffHours = (dayOfWeek, covers) => {
+    const template = staffHoursTemplates[dayOfWeek];
+    if (template.baseHours === 0) return 0;
+    const hours = Math.round(template.baseHours + (covers * template.perCover));
+    return hours + 3;
+  };
+
   const calculateSmartForecast = (bookingsData, multiplier) => {
     // Separate bookings into large groups (>10) and regular bookings (<=10)
     const largeGroups = bookingsData.filter(booking => booking.people > 10);
