@@ -526,7 +526,8 @@ const Glasgow14DayForecast = () => {
       const headerLine = lines[0];
       const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       
-      const dateCol = headers.findIndex(h => h === 'Event date');
+      const eventDateCol = headers.findIndex(h => h === 'Event date');
+      const dateCol = headers.findIndex(h => h === 'date');
       const peopleCol = headers.findIndex(h => h === 'people');
       const statusCol = headers.findIndex(h => h === 'status');
       const userIdCol = headers.findIndex(h => h === 'user_id');
@@ -535,8 +536,9 @@ const Glasgow14DayForecast = () => {
       const usernameCol = headers.findIndex(h => h === 'username');
       const venueCol = headers.findIndex(h => h.toLowerCase() === 'venue' || h.toLowerCase() === 'location' || h.toLowerCase() === 'site');
       
-      if (dateCol === -1 || peopleCol === -1) {
-        setError(`CSV columns not found. Found: ${headers.join(', ')}`);
+      // Check if we have at least one date column (Event date or date) and people column
+      if ((eventDateCol === -1 && dateCol === -1) || peopleCol === -1) {
+        setError(`CSV columns not found. Need 'Event date' or 'date', and 'people'. Found: ${headers.join(', ')}`);
         return;
       }
 
@@ -589,11 +591,24 @@ const Glasgow14DayForecast = () => {
 
         if (row.length < headers.length - 5) continue;
 
-        const dateStr = row[dateCol];
+        // Use Event date column first, fall back to date column if Event date is blank
+        let dateStr = '';
+        if (eventDateCol !== -1 && row[eventDateCol] && row[eventDateCol].trim() !== '') {
+          dateStr = row[eventDateCol];
+        } else if (dateCol !== -1 && row[dateCol] && row[dateCol].trim() !== '') {
+          dateStr = row[dateCol];
+        }
+        
+        // Skip this row if we don't have a valid date from either column
+        if (!dateStr || dateStr.trim() === '') {
+          continue;
+        }
+        
         const people = parseInt(row[peopleCol]) || 0;
         const status = statusCol !== -1 ? row[statusCol].toLowerCase() : 'active';
         const email = emailCol !== -1 ? row[emailCol].toLowerCase() : '';
         const username = usernameCol !== -1 ? row[usernameCol].toLowerCase() : '';
+        const bookingAmount = amountCol !== -1 ? (parseFloat(row[amountCol]) || 0) : 0;
 
         // FILTER: Skip test data
         if (email.includes('test') || username.includes('test')) {
@@ -613,8 +628,16 @@ const Glasgow14DayForecast = () => {
         if (people === 0) continue;
 
         try {
-          const dateParts = dateStr.split(' ')[0].split('-');
-          const timeParts = dateStr.split(' ')[1]?.split(':') || [0, 0, 0];
+          // Parse the date string - use the one with time information
+          let dateForParsing = dateStr;
+          
+          // If we're using Event date (which might not have time), also get time from 'date' column
+          if (dateCol !== -1 && row[dateCol] && row[dateCol].trim() !== '') {
+            dateForParsing = row[dateCol]; // 'date' column has the time
+          }
+          
+          const dateParts = dateForParsing.split(' ')[0].split('-');
+          const timeParts = dateForParsing.split(' ')[1]?.split(':') || [0, 0, 0];
           const eventDate = new Date(
             parseInt(dateParts[0]),
             parseInt(dateParts[1]) - 1,
@@ -646,14 +669,20 @@ const Glasgow14DayForecast = () => {
               bookingCount: 0,
               covers: 0,
               bookingHours: [],
-              bookings: [] // Track individual bookings for smart forecast
+              bookings: [], // Track individual bookings with people, amount, and time
+              totalBookingAmount: 0 // Track actual booking revenue
             };
           }
           
           bookingsByDate[dateKey].bookingCount++;
           bookingsByDate[dateKey].covers += people;
           bookingsByDate[dateKey].bookingHours.push(bookingHour);
-          bookingsByDate[dateKey].bookings.push({ people }); // Store individual booking
+          bookingsByDate[dateKey].bookings.push({ 
+            people: people,
+            amount: bookingAmount,
+            hour: bookingHour
+          }); // Store individual booking with details
+          bookingsByDate[dateKey].totalBookingAmount += bookingAmount;
           
         } catch (e) {
           continue;
@@ -686,21 +715,44 @@ const Glasgow14DayForecast = () => {
           
           let isPotentialPrivateFunction = false;
           
-          if (daysUntil > 0 && venue !== 'newcastle') {
-            let normallyClosedDays = [1, 2, 3];
-            if (venue === 'edinburgh') {
-              normallyClosedDays = [1, 2];
-            }
+          // Define normally closed days for this venue
+          let normallyClosedDays = [1, 2, 3]; // Glasgow default
+          if (venue === 'edinburgh') {
+            normallyClosedDays = [1, 2];
+          } else if (venue === 'newcastle') {
+            normallyClosedDays = []; // Newcastle operates 7 days
+          }
+          
+          // Check for private functions regardless of daysUntil (can be past, present, or future)
+          if (venue !== 'newcastle') {
             const isNormallyClosed = normallyClosedDays.includes(dayOfWeek);
-            isPotentialPrivateFunction = isNormallyClosed;
+            
+            // For operating days, only flag as private function if there's a LARGE booking (40+ people) at an early time
+            // This avoids flagging normal days as private functions just because someone booked at 2pm
+            let hasPrivateFunction = isNormallyClosed;
+            
+            if (!isNormallyClosed && data.bookings) {
+              // Check if there are any large bookings (40+ people) at unusual times
+              const largeEarlyBooking = data.bookings.some(b => b.people >= 40 && b.hour < 15);
+              const largeLateBooking = data.bookings.some(b => b.people >= 20 && b.hour >= 23);
+              hasPrivateFunction = largeEarlyBooking || largeLateBooking;
+            }
+            
+            isPotentialPrivateFunction = hasPrivateFunction;
+            
+            // Debug logging
+            if (dayOfWeek >= 3 && dayOfWeek <= 4) {
+              console.log(`=== ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]} Detection ===`);
+              console.log('Is Normally Closed?', isNormallyClosed);
+              console.log('Bookings:', data.bookings ? data.bookings.map(b => `${b.people}p at ${b.hour}:00`) : 'none');
+              console.log('Is Private Function?', isPotentialPrivateFunction);
+            }
           }
           
           const currentCovers = data.covers;
           
-          if (isPotentialPrivateFunction) {
-            multiplier = 1.0;
-            forecastCovers = currentCovers;
-          }
+          // Don't override multiplier for private functions anymore
+          // The smart forecast already handles large groups separately
           
           const venueCapacity = VENUE_CAPACITIES[venue];
           const wasCapped = forecastCovers > venueCapacity;
@@ -711,15 +763,53 @@ const Glasgow14DayForecast = () => {
           const staffHours = calculateStaffHours(dayOfWeek, forecastCovers);
           const revenuePerCover = getRevenuePerCover(dayOfWeek);
           
-          const revenue = isPotentialPrivateFunction 
-            ? (currentCovers * revenuePerCover)
-            : (forecastCovers * revenuePerCover);
+          const revenue = forecastCovers * revenuePerCover;
           
           const laborCost = staffHours * HOURLY_RATE;
           const laborPct = revenue > 0 ? (laborCost / revenue * 100) : 0;
           
           const minimumBudget = minimumDailyBudgets[dayOfWeek];
-          const budgetRequired = Math.max(laborCost, minimumBudget);
+          
+          // Calculate budget required
+          let budgetRequired = Math.max(laborCost, minimumBudget);
+          
+          // For private functions, identify which specific bookings are private hires
+          // and add 25% of ONLY those booking amounts to the normal budget
+          if (isPotentialPrivateFunction && data.bookings && data.bookings.length > 0) {
+            let privateFunctionAmount = 0;
+            
+            // Identify private hire bookings by their time
+            data.bookings.forEach(booking => {
+              const isClosedDay = normallyClosedDays.includes(dayOfWeek);
+              const isEarlyBooking = booking.hour < 15 && !isClosedDay;
+              const isLateBooking = booking.hour >= 23;
+              
+              if (isClosedDay || isEarlyBooking || isLateBooking) {
+                privateFunctionAmount += booking.amount;
+              }
+            });
+            
+            if (privateFunctionAmount > 0) {
+              const privateFunctionRevenue = privateFunctionAmount / 1.2; // Remove VAT
+              const privateFunctionSurcharge = privateFunctionRevenue * 0.25; // 25% surcharge
+              
+              // Add the surcharge to the normal budget (which already accounts for all covers)
+              budgetRequired = budgetRequired + privateFunctionSurcharge;
+              
+              // Debug logging
+              if (dayOfWeek === 3) {
+                console.log('=== Wednesday Private Function Budget ===');
+                console.log('Total Covers:', data.covers);
+                console.log('Forecast Covers:', forecastCovers);
+                console.log('Private Function Amount (inc VAT):', '£' + privateFunctionAmount.toFixed(2));
+                console.log('Private Function Revenue (ex VAT):', '£' + privateFunctionRevenue.toFixed(2));
+                console.log('Private Function Surcharge (25%):', '£' + privateFunctionSurcharge.toFixed(2));
+                console.log('Normal Budget for ' + forecastCovers + ' covers:', '£' + Math.max(laborCost, minimumBudget).toFixed(2));
+                console.log('Final Budget Required:', '£' + budgetRequired.toFixed(2));
+                console.log('Bookings:', data.bookings.map(b => `${b.people} people at ${b.hour}:00, £${b.amount}`));
+              }
+            }
+          }
           
           const isPast = eventDate < today;
 
