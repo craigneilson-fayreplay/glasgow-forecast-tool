@@ -791,7 +791,7 @@ const Glasgow14DayForecast = () => {
             
             if (privateFunctionAmount > 0) {
               const privateFunctionRevenue = privateFunctionAmount / 1.2; // Remove VAT
-              const privateFunctionSurcharge = privateFunctionRevenue * 0.25; // 25% surcharge
+              const privateFunctionSurcharge = privateFunctionRevenue * 0.3; // 30% additional budget
               
               // Add the surcharge to the normal budget (which already accounts for all covers)
               budgetRequired = budgetRequired + privateFunctionSurcharge;
