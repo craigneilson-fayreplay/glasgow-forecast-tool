@@ -288,7 +288,7 @@ const Glasgow14DayForecast = () => {
         1: 131,   // Mon: closed day minimum (manager only)
         2: 131,   // Tue: closed day minimum (manager only)
         3: 600,   // Wed: higher operating minimum (open day)
-        4: 500,   // Thu: operating minimum
+        4: 1645,  // Thu: operating minimum (18% target)
         5: 800,   // Fri: operating minimum
         6: 1000   // Sat: peak day minimum
       };
