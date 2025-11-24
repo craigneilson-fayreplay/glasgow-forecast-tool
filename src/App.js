@@ -458,7 +458,10 @@ const Glasgow14DayForecast = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const selectedForecasts = rawForecastData.map(day => {
+    // Filter raw data by selected venue
+    const venueData = rawForecastData.filter(day => day.venue === selectedVenue);
+
+    const selectedForecasts = venueData.map(day => {
       const dayOfWeek = day.date.getDay();
       const daysUntil = Math.round((day.date - today) / (1000 * 60 * 60 * 24));
       
@@ -623,7 +626,7 @@ const Glasgow14DayForecast = () => {
       sundayNextWeek.setDate(sundayNextWeek.getDate() + 6);
       sundayNextWeek.setHours(23, 59, 59, 999);
 
-      const bookingsByDate = {};
+      const bookingsByVenueAndDate = {};
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
@@ -664,15 +667,21 @@ const Glasgow14DayForecast = () => {
           continue;
         }
 
-        if (venueCol !== -1) {
-          const bookingVenue = row[venueCol].toLowerCase().trim();
-          if (!bookingVenue.includes(venue.toLowerCase())) {
-            continue;
-          }
-        }
-
         if (status !== 'active') continue;
         if (people === 0) continue;
+        
+        // Determine venue for this booking
+        let bookingVenue = 'glasgow';
+        if (venueCol !== -1) {
+          const bookingVenueRaw = row[venueCol].toLowerCase().trim();
+          if (bookingVenueRaw.includes('edinburgh')) {
+            bookingVenue = 'edinburgh';
+          } else if (bookingVenueRaw.includes('newcastle')) {
+            bookingVenue = 'newcastle';
+          } else if (bookingVenueRaw.includes('glasgow')) {
+            bookingVenue = 'glasgow';
+          }
+        }
 
         try {
           const dateParts = dateStr.split(' ')[0].split('-');
@@ -697,10 +706,12 @@ const Glasgow14DayForecast = () => {
           groupDate.setHours(0, 0, 0, 0);
           
           const dateKey = getDateString(groupDate);
+          const venueKey = `${bookingVenue}_${dateKey}`;
           
-          if (!bookingsByDate[dateKey]) {
-            bookingsByDate[dateKey] = {
+          if (!bookingsByVenueAndDate[venueKey]) {
+            bookingsByVenueAndDate[venueKey] = {
               date: new Date(groupDate),
+              venue: bookingVenue,
               bookingCount: 0,
               covers: 0,
               bookingHours: [],
@@ -708,10 +719,10 @@ const Glasgow14DayForecast = () => {
             };
           }
           
-          bookingsByDate[dateKey].bookingCount++;
-          bookingsByDate[dateKey].covers += people;
-          bookingsByDate[dateKey].bookingHours.push(bookingHour);
-          bookingsByDate[dateKey].bookings.push({ people });
+          bookingsByVenueAndDate[venueKey].bookingCount++;
+          bookingsByVenueAndDate[venueKey].covers += people;
+          bookingsByVenueAndDate[venueKey].bookingHours.push(bookingHour);
+          bookingsByVenueAndDate[venueKey].bookings.push({ people });
           
         } catch (e) {
           continue;
@@ -720,8 +731,8 @@ const Glasgow14DayForecast = () => {
 
       const parsedRawData = [];
       
-      for (const dateKey in bookingsByDate) {
-        const data = bookingsByDate[dateKey];
+      for (const venueKey in bookingsByVenueAndDate) {
+        const data = bookingsByVenueAndDate[venueKey];
         const eventDate = data.date;
         
         const daysUntil = Math.round((eventDate - today) / (1000 * 60 * 60 * 24));
@@ -734,6 +745,7 @@ const Glasgow14DayForecast = () => {
             dateStr: eventDate.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }),
             dayOfWeek,
             dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
+            venue: data.venue,
             currentBookings: data.bookingCount,
             currentCovers: data.covers,
             bookings: data.bookings,
