@@ -278,39 +278,40 @@ const Glasgow14DayForecast = () => {
     return revenueByVenue[selectedVenue]?.[dayOfWeek] || 25.00;
   };
 
-  // Calculate minimum daily budgets to achieve ~20% labor cost
-  // Formula: minimumBudget = expectedRevenue * 0.20
+  // Calculate minimum daily budgets
+  // Includes manager weekly allocation spread across the week
+  // Manager cost: £596.15/week distributed to match operational patterns
   const getMinimumDailyBudgets = (selectedVenue) => {
     if (selectedVenue === 'edinburgh') {
       return {
-        0: 1400,  // Sun: 24.90 per cover, typical 280 covers = 6972 revenue, 20% = 1394
-        1: 450,   // Mon: 22.50 per cover, typical 100 covers = 2250 revenue, 20% = 450
-        2: 450,   // Tue: 22.50 per cover, typical 100 covers = 2250 revenue, 20% = 450
-        3: 1180,  // Wed: 23.50 per cover, typical 250 covers = 5875 revenue, 20% = 1175
-        4: 980,   // Thu: 24.50 per cover, typical 200 covers = 4900 revenue, 20% = 980
-        5: 1390,  // Fri: 27.80 per cover, typical 250 covers = 6950 revenue, 20% = 1390
-        6: 2260   // Sat: 28.20 per cover, typical 400 covers = 11280 revenue, 20% = 2256
+        0: 700,   // Sun: base minimum
+        1: 131,   // Mon: closed day minimum (manager only)
+        2: 131,   // Tue: closed day minimum (manager only)
+        3: 600,   // Wed: higher operating minimum (open day)
+        4: 500,   // Thu: operating minimum
+        5: 800,   // Fri: operating minimum
+        6: 1000   // Sat: peak day minimum
       };
     } else if (selectedVenue === 'newcastle') {
       return {
-        0: 1400,  // Sun: 26.74 per cover, typical 260 covers = 6952 revenue, 20% = 1390
-        1: 1030,  // Mon: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
-        2: 1030,  // Tue: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
-        3: 1030,  // Wed: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
-        4: 1030,  // Thu: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
-        5: 1390,  // Fri: 27.72 per cover, typical 250 covers = 6930 revenue, 20% = 1386
-        6: 2200   // Sat: 27.59 per cover, typical 400 covers = 11036 revenue, 20% = 2207
+        0: 1000,  // Sun: peak day
+        1: 750,   // Mon: open all week
+        2: 750,   // Tue: open all week
+        3: 750,   // Wed: open all week
+        4: 750,   // Thu: open all week
+        5: 1000,  // Fri: operating minimum
+        6: 1600   // Sat: peak day minimum
       };
     } else {
       // Glasgow
       return {
-        0: 1400,  // Sun: 26.74 per cover, typical 260 covers = 6952 revenue, 20% = 1390
-        1: 515,   // Mon: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
-        2: 515,   // Tue: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
-        3: 515,   // Wed: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
-        4: 1030,  // Thu: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
-        5: 1390,  // Fri: 27.72 per cover, typical 250 covers = 6930 revenue, 20% = 1386
-        6: 2200   // Sat: 27.59 per cover, typical 400 covers = 11036 revenue, 20% = 2207
+        0: 700,   // Sun: base minimum
+        1: 131,   // Mon: closed day minimum (manager only)
+        2: 131,   // Tue: closed day minimum (manager only)
+        3: 200,   // Wed: closed day light minimum
+        4: 500,   // Thu: operating minimum
+        5: 800,   // Fri: operating minimum
+        6: 1000   // Sat: peak day minimum
       };
     }
   };
