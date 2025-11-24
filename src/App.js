@@ -210,17 +210,12 @@ const getMondayOfWeek = (date) => {
   d.setHours(0, 0, 0, 0);
   const day = d.getDay();
   
-  // Sunday is 0, Monday is 1, Tuesday is 2, etc.
-  // We want to find Monday of this week
   let daysToSubtract;
   if (day === 0) {
-    // Today is Sunday - Monday was 6 days ago
     daysToSubtract = 6;
   } else if (day === 1) {
-    // Today is Monday - we're already on Monday
     daysToSubtract = 0;
   } else {
-    // Today is Tue-Sat - Monday was (day-1) days ago
     daysToSubtract = day - 1;
   }
   
@@ -249,7 +244,7 @@ const Glasgow14DayForecast = () => {
   const HOURLY_RATE = 12.60;
   const MANAGER_WEEKLY_COST = 596.15;
 
-  const getRevenuePerCover = (dayOfWeek) => {
+  const getRevenuePerCover = (dayOfWeek, selectedVenue) => {
     const revenueByVenue = {
       glasgow: {
         0: 26.74,
@@ -280,22 +275,50 @@ const Glasgow14DayForecast = () => {
       }
     };
     
-    return revenueByVenue[venue]?.[dayOfWeek] || 25.00;
+    return revenueByVenue[selectedVenue]?.[dayOfWeek] || 25.00;
   };
 
-  const revenuePerCoverByDay = {
-    0: 26.74,
-    1: 25.70,
-    2: 25.70,
-    3: 25.70,
-    4: 25.70,
-    5: 27.72,
-    6: 27.59
+  // Calculate minimum daily budgets to achieve ~20% labor cost
+  // Formula: minimumBudget = expectedRevenue * 0.20
+  const getMinimumDailyBudgets = (selectedVenue) => {
+    if (selectedVenue === 'edinburgh') {
+      return {
+        0: 1400,  // Sun: 24.90 per cover, typical 280 covers = 6972 revenue, 20% = 1394
+        1: 450,   // Mon: 22.50 per cover, typical 100 covers = 2250 revenue, 20% = 450
+        2: 450,   // Tue: 22.50 per cover, typical 100 covers = 2250 revenue, 20% = 450
+        3: 1180,  // Wed: 23.50 per cover, typical 250 covers = 5875 revenue, 20% = 1175
+        4: 980,   // Thu: 24.50 per cover, typical 200 covers = 4900 revenue, 20% = 980
+        5: 1390,  // Fri: 27.80 per cover, typical 250 covers = 6950 revenue, 20% = 1390
+        6: 2260   // Sat: 28.20 per cover, typical 400 covers = 11280 revenue, 20% = 2256
+      };
+    } else if (selectedVenue === 'newcastle') {
+      return {
+        0: 1400,  // Sun: 26.74 per cover, typical 260 covers = 6952 revenue, 20% = 1390
+        1: 1030,  // Mon: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
+        2: 1030,  // Tue: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
+        3: 1030,  // Wed: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
+        4: 1030,  // Thu: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
+        5: 1390,  // Fri: 27.72 per cover, typical 250 covers = 6930 revenue, 20% = 1386
+        6: 2200   // Sat: 27.59 per cover, typical 400 covers = 11036 revenue, 20% = 2207
+      };
+    } else {
+      // Glasgow
+      return {
+        0: 1400,  // Sun: 26.74 per cover, typical 260 covers = 6952 revenue, 20% = 1390
+        1: 515,   // Mon: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
+        2: 515,   // Tue: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
+        3: 515,   // Wed: 25.70 per cover, typical 100 covers = 2570 revenue, 20% = 514
+        4: 1030,  // Thu: 25.70 per cover, typical 200 covers = 5140 revenue, 20% = 1028
+        5: 1390,  // Fri: 27.72 per cover, typical 250 covers = 6930 revenue, 20% = 1386
+        6: 2200   // Sat: 27.59 per cover, typical 400 covers = 11036 revenue, 20% = 2207
+      };
+    }
   };
 
   const [user, setUser] = useState(null);
   const [venue, setVenue] = useState('glasgow');
   const [uploadedData, setUploadedData] = useState(null);
+  const [rawForecastData, setRawForecastData] = useState(null);
   const [forecasts, setForecasts] = useState([]);
   const [error, setError] = useState(null);
   const [loginError, setLoginError] = useState(null);
@@ -304,45 +327,8 @@ const Glasgow14DayForecast = () => {
   const [loadingWeather, setLoadingWeather] = useState(false);
   const [weatherLastUpdated, setWeatherLastUpdated] = useState(null);
 
-  let minimumDailyBudgets;
-  if (venue === 'edinburgh') {
-    minimumDailyBudgets = {
-      0: 700,
-      1: 131,
-      2: 131,
-      3: 600,
-      4: 500,
-      5: 800,
-      6: 1000
-    };
-  } else if (venue === 'newcastle') {
-    minimumDailyBudgets = {
-      0: 1000,
-      1: 750,
-      2: 750,
-      3: 750,
-      4: 750,
-      5: 1000,
-      6: 1600
-    };
-  } else {
-    minimumDailyBudgets = {
-      0: 700,
-      1: 131,
-      2: 131,
-      3: 200,
-      4: 500,
-      5: 800,
-      6: 1000
-    };
-  }
-
-  // Target labor % by venue - Newcastle has higher target due to being new
-  const getTargetLaborPct = () => {
-    return venue === 'newcastle' ? 30 : 25;
-  };
-
   const forecastMultipliers = VENUE_MULTIPLIERS[venue] || VENUE_MULTIPLIERS.glasgow;
+  const minimumDailyBudgets = getMinimumDailyBudgets(venue);
 
   let staffHoursTemplates;
   if (venue === 'edinburgh') {
@@ -394,19 +380,13 @@ const Glasgow14DayForecast = () => {
   };
 
   const calculateSmartForecast = (bookingsData, multiplier) => {
-    // Separate bookings into large groups (>10) and regular bookings (<=10)
     const largeGroups = bookingsData.filter(booking => booking.people > 10);
     const regularBookings = bookingsData.filter(booking => booking.people <= 10);
     
-    // Calculate covers from each category
     const largeGroupCovers = largeGroups.reduce((sum, b) => sum + b.people, 0);
     const regularCovers = regularBookings.reduce((sum, b) => sum + b.people, 0);
     
-    // Only apply multiplier to regular bookings (walk-ins + small bookings)
-    // Large groups are assumed to be locked in and won't multiply
     const multipliedRegular = Math.round(regularCovers * multiplier);
-    
-    // Total forecast = multiplied regular covers + all large group covers
     const totalForecast = multipliedRegular + largeGroupCovers;
     
     return {
@@ -450,6 +430,7 @@ const Glasgow14DayForecast = () => {
     setForecasts([]);
     setUploadedData(null);
     setWeatherData(null);
+    setRawForecastData(null);
   };
 
   React.useEffect(() => {
@@ -460,10 +441,98 @@ const Glasgow14DayForecast = () => {
   }, []);
 
   useEffect(() => {
+    if (rawForecastData && rawForecastData.length > 0) {
+      regenerateForecasts(venue);
+    }
+  }, [venue]);
+
+  useEffect(() => {
     if (forecasts.length > 0 && !weatherData && !loadingWeather) {
       handleAutoFetchWeather();
     }
   }, [forecasts.length]);
+
+  const regenerateForecasts = (selectedVenue) => {
+    if (!rawForecastData || rawForecastData.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const selectedForecasts = rawForecastData.map(day => {
+      const dayOfWeek = day.date.getDay();
+      const daysUntil = Math.round((day.date - today) / (1000 * 60 * 60 * 24));
+      
+      let multiplier = 1.0;
+      let forecastCovers = day.currentCovers;
+      
+      if (daysUntil > 0) {
+        multiplier = calculateMultiplier(dayOfWeek, daysUntil);
+        
+        const smartForecast = calculateSmartForecast(day.bookings, multiplier);
+        forecastCovers = smartForecast.totalForecast;
+      }
+
+      let isPotentialPrivateFunction = false;
+      if (daysUntil > 0 && selectedVenue !== 'newcastle') {
+        let normallyClosedDays = [1, 2, 3];
+        if (selectedVenue === 'edinburgh') {
+          normallyClosedDays = [1, 2];
+        }
+        const isNormallyClosed = normallyClosedDays.includes(dayOfWeek);
+        isPotentialPrivateFunction = isNormallyClosed;
+      }
+
+      if (isPotentialPrivateFunction) {
+        multiplier = 1.0;
+        forecastCovers = day.currentCovers;
+      }
+
+      const venueCapacity = VENUE_CAPACITIES[selectedVenue];
+      const wasCapped = forecastCovers > venueCapacity;
+      if (venueCapacity && forecastCovers > venueCapacity) {
+        forecastCovers = venueCapacity;
+      }
+
+      const staffHours = calculateStaffHours(dayOfWeek, forecastCovers);
+      const revenuePerCover = getRevenuePerCover(dayOfWeek, selectedVenue);
+      
+      const revenue = isPotentialPrivateFunction 
+        ? (day.currentCovers * revenuePerCover)
+        : (forecastCovers * revenuePerCover);
+      
+      const laborCost = staffHours * HOURLY_RATE;
+      const laborPct = revenue > 0 ? (laborCost / revenue * 100) : 0;
+      
+      const selectedMinimumBudgets = getMinimumDailyBudgets(selectedVenue);
+      const minimumBudget = selectedMinimumBudgets[dayOfWeek];
+      const budgetRequired = Math.max(laborCost, minimumBudget);
+      
+      const isPast = day.date < today;
+
+      return {
+        ...day,
+        daysUntil,
+        multiplier,
+        forecastCovers,
+        staffHours,
+        revenue,
+        laborCost,
+        laborPct,
+        budgetRequired,
+        minimumBudget,
+        isClosed: staffHours === 0 && !isPotentialPrivateFunction,
+        isPotentialPrivateFunction,
+        isPast,
+        weatherMultiplier: 1.0,
+        weatherInfo: null,
+        wasCapped,
+        venueCapacity
+      };
+    });
+
+    setForecasts(selectedForecasts);
+    setWeatherData(null);
+  };
 
   const handleAutoFetchWeather = async () => {
     setLoadingWeather(true);
@@ -526,8 +595,7 @@ const Glasgow14DayForecast = () => {
       const headerLine = lines[0];
       const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       
-      const eventDateCol = headers.findIndex(h => h === 'Event date');
-      const dateCol = headers.findIndex(h => h === 'date');
+      const dateCol = headers.findIndex(h => h === 'Event date');
       const peopleCol = headers.findIndex(h => h === 'people');
       const statusCol = headers.findIndex(h => h === 'status');
       const userIdCol = headers.findIndex(h => h === 'user_id');
@@ -536,19 +604,14 @@ const Glasgow14DayForecast = () => {
       const usernameCol = headers.findIndex(h => h === 'username');
       const venueCol = headers.findIndex(h => h.toLowerCase() === 'venue' || h.toLowerCase() === 'location' || h.toLowerCase() === 'site');
       
-      // Check if we have at least one date column (Event date or date) and people column
-      if ((eventDateCol === -1 && dateCol === -1) || peopleCol === -1) {
-        setError(`CSV columns not found. Need 'Event date' or 'date', and 'people'. Found: ${headers.join(', ')}`);
+      if (dateCol === -1 || peopleCol === -1) {
+        setError(`CSV columns not found. Found: ${headers.join(', ')}`);
         return;
       }
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // ========================================================================
-      // CRITICAL FIX: Get Monday of current week
-      // This ensures we only show current week + next week, never prior weeks
-      // ========================================================================
       const mondayThisWeek = getMondayOfWeek(today);
       const sundayThisWeek = new Date(mondayThisWeek);
       sundayThisWeek.setDate(sundayThisWeek.getDate() + 6);
@@ -591,34 +654,18 @@ const Glasgow14DayForecast = () => {
 
         if (row.length < headers.length - 5) continue;
 
-        // Use Event date column first, fall back to date column if Event date is blank
-        let dateStr = '';
-        if (eventDateCol !== -1 && row[eventDateCol] && row[eventDateCol].trim() !== '') {
-          dateStr = row[eventDateCol];
-        } else if (dateCol !== -1 && row[dateCol] && row[dateCol].trim() !== '') {
-          dateStr = row[dateCol];
-        }
-        
-        // Skip this row if we don't have a valid date from either column
-        if (!dateStr || dateStr.trim() === '') {
-          continue;
-        }
-        
+        const dateStr = row[dateCol];
         const people = parseInt(row[peopleCol]) || 0;
         const status = statusCol !== -1 ? row[statusCol].toLowerCase() : 'active';
         const email = emailCol !== -1 ? row[emailCol].toLowerCase() : '';
         const username = usernameCol !== -1 ? row[usernameCol].toLowerCase() : '';
-        const bookingAmount = amountCol !== -1 ? (parseFloat(row[amountCol]) || 0) : 0;
 
-        // FILTER: Skip test data
         if (email.includes('test') || username.includes('test')) {
           continue;
         }
 
-        // FILTER: Only include bookings for selected venue
         if (venueCol !== -1) {
           const bookingVenue = row[venueCol].toLowerCase().trim();
-          // Check if the booking venue matches the selected venue
           if (!bookingVenue.includes(venue.toLowerCase())) {
             continue;
           }
@@ -628,16 +675,8 @@ const Glasgow14DayForecast = () => {
         if (people === 0) continue;
 
         try {
-          // Parse the date string - use the one with time information
-          let dateForParsing = dateStr;
-          
-          // If we're using Event date (which might not have time), also get time from 'date' column
-          if (dateCol !== -1 && row[dateCol] && row[dateCol].trim() !== '') {
-            dateForParsing = row[dateCol]; // 'date' column has the time
-          }
-          
-          const dateParts = dateForParsing.split(' ')[0].split('-');
-          const timeParts = dateForParsing.split(' ')[1]?.split(':') || [0, 0, 0];
+          const dateParts = dateStr.split(' ')[0].split('-');
+          const timeParts = dateStr.split(' ')[1]?.split(':') || [0, 0, 0];
           const eventDate = new Date(
             parseInt(dateParts[0]),
             parseInt(dateParts[1]) - 1,
@@ -649,10 +688,6 @@ const Glasgow14DayForecast = () => {
           
           if (isNaN(eventDate.getTime())) continue;
           
-          // ========================================================================
-          // NEW FILTER: Only include bookings from this week or next week
-          // Skip any prior week bookings (which can happen due to export glitches)
-          // ========================================================================
           if (eventDate < mondayThisWeek || eventDate > sundayNextWeek) {
             continue;
           }
@@ -669,27 +704,21 @@ const Glasgow14DayForecast = () => {
               bookingCount: 0,
               covers: 0,
               bookingHours: [],
-              bookings: [], // Track individual bookings with people, amount, and time
-              totalBookingAmount: 0 // Track actual booking revenue
+              bookings: []
             };
           }
           
           bookingsByDate[dateKey].bookingCount++;
           bookingsByDate[dateKey].covers += people;
           bookingsByDate[dateKey].bookingHours.push(bookingHour);
-          bookingsByDate[dateKey].bookings.push({ 
-            people: people,
-            amount: bookingAmount,
-            hour: bookingHour
-          }); // Store individual booking with details
-          bookingsByDate[dateKey].totalBookingAmount += bookingAmount;
+          bookingsByDate[dateKey].bookings.push({ people });
           
         } catch (e) {
           continue;
         }
       }
 
-      const parsedData = [];
+      const parsedRawData = [];
       
       for (const dateKey in bookingsByDate) {
         const data = bookingsByDate[dateKey];
@@ -697,216 +726,32 @@ const Glasgow14DayForecast = () => {
         
         const daysUntil = Math.round((eventDate - today) / (1000 * 60 * 60 * 24));
         
-        // Only include within this week + next week
         if (daysUntil >= -6 && daysUntil <= 13) {
           const dayOfWeek = eventDate.getDay();
           
-          const isPastDate = eventDate < today;
-          let multiplier = 1.0;
-          let forecastCovers = data.covers;
-          
-          if (!isPastDate) {
-            multiplier = calculateMultiplier(dayOfWeek, daysUntil);
-            
-            // Use smart forecast to separate large groups from multiplier
-            const smartForecast = calculateSmartForecast(data.bookings, multiplier);
-            forecastCovers = smartForecast.totalForecast;
-          }
-          
-          let isPotentialPrivateFunction = false;
-          
-          // Define normally closed days for this venue
-          let normallyClosedDays = [1, 2, 3]; // Glasgow default
-          if (venue === 'edinburgh') {
-            normallyClosedDays = [1, 2];
-          } else if (venue === 'newcastle') {
-            normallyClosedDays = []; // Newcastle operates 7 days
-          }
-          
-          // Check for private functions regardless of daysUntil (can be past, present, or future)
-          if (venue !== 'newcastle') {
-            const isNormallyClosed = normallyClosedDays.includes(dayOfWeek);
-            
-            // For operating days, only flag as private function if there's a LARGE booking (40+ people) at an early time
-            // This avoids flagging normal days as private functions just because someone booked at 2pm
-            let hasPrivateFunction = isNormallyClosed;
-            
-            if (!isNormallyClosed && data.bookings) {
-              // Check if there are any large bookings (40+ people) at unusual times
-              const largeEarlyBooking = data.bookings.some(b => b.people >= 40 && b.hour < 15);
-              const largeLateBooking = data.bookings.some(b => b.people >= 20 && b.hour >= 23);
-              hasPrivateFunction = largeEarlyBooking || largeLateBooking;
-            }
-            
-            isPotentialPrivateFunction = hasPrivateFunction;
-            
-            // Debug logging
-            if (dayOfWeek >= 3 && dayOfWeek <= 4) {
-              console.log(`=== ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]} Detection ===`);
-              console.log('Is Normally Closed?', isNormallyClosed);
-              console.log('Bookings:', data.bookings ? data.bookings.map(b => `${b.people}p at ${b.hour}:00`) : 'none');
-              console.log('Is Private Function?', isPotentialPrivateFunction);
-            }
-          }
-          
-          const currentCovers = data.covers;
-          
-          // Don't override multiplier for private functions anymore
-          // The smart forecast already handles large groups separately
-          
-          const venueCapacity = VENUE_CAPACITIES[venue];
-          const wasCapped = forecastCovers > venueCapacity;
-          if (venueCapacity && forecastCovers > venueCapacity) {
-            forecastCovers = venueCapacity;
-          }
-          
-          const staffHours = calculateStaffHours(dayOfWeek, forecastCovers);
-          const revenuePerCover = getRevenuePerCover(dayOfWeek);
-          
-          const revenue = forecastCovers * revenuePerCover;
-          
-          const laborCost = staffHours * HOURLY_RATE;
-          const laborPct = revenue > 0 ? (laborCost / revenue * 100) : 0;
-          
-          const minimumBudget = minimumDailyBudgets[dayOfWeek];
-          
-          // Calculate budget required
-          let budgetRequired = Math.max(laborCost, minimumBudget);
-          
-          // For private functions, identify which specific bookings are private hires
-          // and add 25% of ONLY those booking amounts to the normal budget
-          if (isPotentialPrivateFunction && data.bookings && data.bookings.length > 0) {
-            let privateFunctionAmount = 0;
-            
-            // Identify private hire bookings by their time
-            data.bookings.forEach(booking => {
-              const isClosedDay = normallyClosedDays.includes(dayOfWeek);
-              const isEarlyBooking = booking.hour < 15 && !isClosedDay;
-              const isLateBooking = booking.hour >= 23;
-              
-              if (isClosedDay || isEarlyBooking || isLateBooking) {
-                privateFunctionAmount += booking.amount;
-              }
-            });
-            
-            if (privateFunctionAmount > 0) {
-              const privateFunctionRevenue = privateFunctionAmount / 1.2; // Remove VAT
-              const privateFunctionSurcharge = privateFunctionRevenue * 0.3; // 30% additional budget
-              
-              // Add the surcharge to the normal budget (which already accounts for all covers)
-              budgetRequired = budgetRequired + privateFunctionSurcharge;
-              
-              // Debug logging
-              if (dayOfWeek === 3) {
-                console.log('=== Wednesday Private Function Budget ===');
-                console.log('Total Covers:', data.covers);
-                console.log('Forecast Covers:', forecastCovers);
-                console.log('Private Function Amount (inc VAT):', '£' + privateFunctionAmount.toFixed(2));
-                console.log('Private Function Revenue (ex VAT):', '£' + privateFunctionRevenue.toFixed(2));
-                console.log('Private Function Surcharge (25%):', '£' + privateFunctionSurcharge.toFixed(2));
-                console.log('Normal Budget for ' + forecastCovers + ' covers:', '£' + Math.max(laborCost, minimumBudget).toFixed(2));
-                console.log('Final Budget Required:', '£' + budgetRequired.toFixed(2));
-                console.log('Bookings:', data.bookings.map(b => `${b.people} people at ${b.hour}:00, £${b.amount}`));
-              }
-            }
-          }
-          
-          const isPast = eventDate < today;
-
-          parsedData.push({
+          parsedRawData.push({
             date: eventDate,
             dateStr: eventDate.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }),
             dayOfWeek,
             dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
-            daysUntil,
             currentBookings: data.bookingCount,
-            currentCovers: currentCovers,
-            multiplier: multiplier,
-            forecastCovers,
-            staffHours,
-            revenue,
-            laborCost,
-            laborPct,
-            budgetRequired,
-            minimumBudget,
-            isClosed: staffHours === 0 && !isPotentialPrivateFunction,
-            isPotentialPrivateFunction,
-            isPast: isPast,
-            weatherMultiplier: 1.0,
-            weatherInfo: null,
-            wasCapped,
-            venueCapacity
+            currentCovers: data.covers,
+            bookings: data.bookings,
+            bookingHours: data.bookingHours
           });
         }
       }
 
-      if (parsedData.length === 0) {
+      if (parsedRawData.length === 0) {
         setError('No valid active bookings found for the next 14 days');
         return;
       }
 
-      parsedData.sort((a, b) => a.date - b.date);
+      parsedRawData.sort((a, b) => a.date - b.date);
 
-      const result = [];
-      const allDates = new Set();
-      
-      parsedData.forEach(day => {
-        const dateStr = getDateString(day.date);
-        allDates.add(dateStr);
-      });
-
-      // Fill in missing dates for this week + next week only
-      for (let i = -6; i <= 13; i++) {
-        const checkDate = new Date(today);
-        checkDate.setDate(checkDate.getDate() + i);
-        checkDate.setHours(0, 0, 0, 0);
-        
-        const dayOfWeek = checkDate.getDay();
-        const dateStr = getDateString(checkDate);
-        
-        if (!allDates.has(dateStr)) {
-          let normallyClosedDays = [1, 2, 3];
-          if (venue === 'edinburgh') {
-            normallyClosedDays = [1, 2];
-          } else if (venue === 'newcastle') {
-            normallyClosedDays = [];
-          }
-          
-          if (normallyClosedDays.includes(dayOfWeek)) {
-            const minimumBudget = minimumDailyBudgets[dayOfWeek];
-            
-            result.push({
-              date: checkDate,
-              dateStr: checkDate.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }),
-              dayOfWeek,
-              dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
-              daysUntil: i,
-              currentBookings: 0,
-              currentCovers: 0,
-              multiplier: 1.0,
-              forecastCovers: 0,
-              staffHours: 0,
-              revenue: 0,
-              laborCost: 0,
-              laborPct: 0,
-              budgetRequired: minimumBudget,
-              minimumBudget: minimumBudget,
-              isClosed: true,
-              isPotentialPrivateFunction: false,
-              isPast: false,
-              weatherMultiplier: 1.0,
-              weatherInfo: null,
-              wasCapped: false,
-              venueCapacity: VENUE_CAPACITIES[venue]
-            });
-          }
-        }
-      }
-
-      const finalForecasts = [...parsedData, ...result].sort((a, b) => a.date - b.date);
-      setForecasts(finalForecasts);
+      setRawForecastData(parsedRawData);
       setUploadedData(file.name);
-      setWeatherData(null);
+      regenerateForecasts(venue);
 
     } catch (err) {
       setError(`Error reading file: ${err.message}`);
@@ -969,7 +814,7 @@ const Glasgow14DayForecast = () => {
   }, [forecasts]);
 
   const getStatusColor = (pct) => {
-    const targetPct = getTargetLaborPct();
+    const targetPct = 25;
     if (pct === 0) return 'text-gray-400 bg-gray-100';
     if (pct <= targetPct) return 'text-green-700 bg-green-100';
     if (pct <= targetPct + 5) return 'text-amber-700 bg-amber-100';
@@ -1034,12 +879,7 @@ const Glasgow14DayForecast = () => {
             <label className="text-sm font-semibold">Venue:</label>
             <select
               value={venue}
-              onChange={(e) => {
-                setVenue(e.target.value);
-                setForecasts([]);
-                setUploadedData(null);
-                setWeatherData(null);
-              }}
+              onChange={(e) => setVenue(e.target.value)}
               className="bg-white bg-opacity-20 text-white border border-white rounded px-3 py-2 text-sm font-medium hover:bg-opacity-30 transition"
             >
               <option value="glasgow" className="text-gray-800">Glasgow</option>
@@ -1166,8 +1006,6 @@ const Glasgow14DayForecast = () => {
               return days;
             };
             
-            // CRITICAL: Use TODAY's date to calculate Monday, not the first booking date
-            // This ensures we always show "This Week" starting from Monday of the current week
             const firstMonday = getMondayOfWeek(today);
             
             const forecastMap = {};
@@ -1482,11 +1320,11 @@ const Glasgow14DayForecast = () => {
                   </div>
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Target: </span>
-                    £{(week.totalRevenue * (getTargetLaborPct() / 100)).toFixed(0)} for {getTargetLaborPct()}%
-                    {week.laborPct <= getTargetLaborPct() && (
+                    £{(week.totalRevenue * 0.20).toFixed(0)} for 20%
+                    {week.laborPct <= 20 && (
                       <span className="text-green-700 ml-2">[OK] Under budget</span>
                     )}
-                    {week.laborPct > getTargetLaborPct() && (
+                    {week.laborPct > 20 && (
                       <span className="text-red-700 ml-2">[WARNING] Over budget</span>
                     )}
                   </div>
