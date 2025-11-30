@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Upload, Calendar, Users, DollarSign, AlertCircle, LogOut, Cloud, RefreshCw, ArrowRight, Table, Download, Info } from 'lucide-react';
 
 // ============================================================================
+// ⚠️ GITHUB INSTRUCTION: UNCOMMENT THIS LINE FOR PRODUCTION ⚠️
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 // ============================================================================
@@ -33,6 +34,7 @@ const FINANCIALS = {
     newcastle: 26.00
   },
   HOURLY_RATE: 12.60,
+  BUDGET_DIVISOR: 13.5, // Used to convert Budget £ into Staff Hours
   MANAGER_WEEKLY_COST: 596.15,
   TARGET_LABOR_PCT: 25,
   MIN_BUDGET_PCT: 0.15, // Minimum 15% of revenue allocated to budget
@@ -207,7 +209,7 @@ const ForecastTable = ({ data, showWeather }) => {
                   </span>
                   {day.wasCapped && <span className="ml-1 text-[10px] text-red-500 font-bold">CAP</span>}
                 </td>
-                <td className="px-4 py-3 text-center">{day.staffHours}</td>
+                <td className="px-4 py-3 text-center font-bold text-gray-800 bg-gray-50">{day.staffHours}</td>
                 
                 {/* BUDGET COLUMN */}
                 <td className="px-4 py-3 text-right font-bold text-green-700 bg-green-50/50">
@@ -253,7 +255,7 @@ const Glasgow14DayForecast = () => {
   }, []);
 
   const handleLoginSuccess = (credentialResponse) => {
-    // ⚠️ THIS MOCK LOGIC IS FOR PREVIEW ONLY. GITHUB USES REAL LOGIC BELOW.
+    // ⚠️ MOCK FOR PREVIEW ⚠️
     if (credentialResponse.credential === "mock_token_for_preview") {
        const userData = { email: "demo@thefayreplay.co.uk", name: "Preview User" };
        setUser(userData);
@@ -367,17 +369,19 @@ const Glasgow14DayForecast = () => {
       // Avg Spend for display only
       const avgSpend = forecastCovers > 0 ? (revenue / forecastCovers) : 0;
 
-      // 5. Financials
-      const baseHrs = 10; 
-      const variableHrs = forecastCovers / 4; 
-      const staffHours = Math.round(baseHrs + variableHrs);
-      
-      const laborCost = (staffHours * FINANCIALS.HOURLY_RATE) + (FINANCIALS.MANAGER_WEEKLY_COST / 7);
-      
-      // 6. BUDGET CALCULATION
+      // 5. BUDGET & HOURS CALCULATION (Updated Logic)
+      // Step A: Calculate Budget (£)
       const minDailyBudget = MINIMUM_DAILY_BUDGETS[venue] ? (MINIMUM_DAILY_BUDGETS[venue][dayOfWeek] || 131) : 131;
-      const incomeBasedBudget = revenue * FINANCIALS.MIN_BUDGET_PCT;
+      const incomeBasedBudget = revenue * FINANCIALS.MIN_BUDGET_PCT; // 15%
       const budget = Math.max(incomeBasedBudget, minDailyBudget);
+
+      // Step B: Calculate Staff Hours based on Budget
+      // Formula: Budget / 13.5 (approx fully loaded hourly cost)
+      const staffHours = Math.round(budget / FINANCIALS.BUDGET_DIVISOR);
+
+      // Step C: Calculate Estimated Labor Cost based on allocated hours
+      // This calculates the 'real' cost of those hours using the base rate + manager allocation
+      const laborCost = (staffHours * FINANCIALS.HOURLY_RATE) + (FINANCIALS.MANAGER_WEEKLY_COST / 7);
 
       // 7. Highlight Logic
       const standardOpenDays = STANDARD_OPEN_DAYS[venue] || [];
