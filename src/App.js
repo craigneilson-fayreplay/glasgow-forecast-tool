@@ -2031,7 +2031,7 @@ const Glasgow14DayForecast = () => {
 // ============================================================================
 // GITHUB: UNCOMMENT THIS BLOCK FOR PRODUCTION
 // ============================================================================
-/*
+
 const ProtectedGlasgowForecast = () => {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -2039,15 +2039,7 @@ const ProtectedGlasgowForecast = () => {
     </GoogleOAuthProvider>
   );
 };
-*/
 
-// For Preview Environment Only (DELETE ON GITHUB)
-const ProtectedGlasgowForecast = () => {
-  return (
-    <GoogleOAuthProvider>
-      <Glasgow14DayForecast />
-    </GoogleOAuthProvider>
-  );
-};
+
 
 export default ProtectedGlasgowForecast;
