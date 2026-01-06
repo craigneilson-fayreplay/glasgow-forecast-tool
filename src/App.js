@@ -1574,34 +1574,35 @@ const Glasgow14DayForecast = () => {
         if (idxVenue > -1 && row[idxVenue]) {
            rowVenue = row[idxVenue].toLowerCase();
         }
+        let dateStr = row[idxDate].replace(/"/g, '').trim();
 
-        let dateStr = row[idxDate].replace(/"/g, '');
-        // Extract just the date part (YYYY-MM-DD) before the space or 'T'
-        if (dateStr.includes('T')) {
-          dateStr = dateStr.split('T')[0];
-        } else if (dateStr.includes(' ')) {
+        // Handle different date formats
+        let dateVal;
+
+        if (dateStr.includes(' ')) {
+          // Format: "2026-01-08 17:00:00" - extract just the date part
           dateStr = dateStr.split(' ')[0];
+        } else if (dateStr.includes('T')) {
+          // Format: "2026-01-08T17:00:00" - extract just the date part
+          dateStr = dateStr.split('T')[0];
         }
 
-// Parse as UTC date to avoid timezone shifts
-const [year, month, day] = dateStr.split('-').map(Number);
-let dateVal = new Date(Date.UTC(year, month - 1, day));
+        // Now dateStr should be "YYYY-MM-DD"
+        // Parse it carefully to avoid timezone issues
+        const dateParts = dateStr.split('-').map(Number);
+        if (dateParts.length !== 3 || !dateParts[0] || !dateParts[1] || !dateParts[2]) continue; // Skip if parsing failed
 
+        const [year, month, day] = dateParts;
 
+        // Create date at noon local time to avoid any timezone boundary issues
+        dateVal = new Date(year, month - 1, day, 12, 0, 0);
 
-        
-        if (isNaN(dateVal.getTime())) {
-           const parts = dateStr.match(/(\d+)[/-](\d+)[/-](\d+)/);
-           if (parts) {
-             const d = parseInt(parts[1]);
-             const m = parseInt(parts[2]) - 1;
-             const y = parseInt(parts[3].length === 2 ? '20'+parts[3] : parts[3]);
-             dateVal = new Date(y, m, d);
-           }
-        }
         if (isNaN(dateVal.getTime())) continue;
 
         const dateKey = dateVal.toISOString().split('T')[0];
+
+
+        
         const people = parseInt(row[idxPeople]) || 0;
         
         // REVENUE LOGIC
