@@ -1576,8 +1576,20 @@ const Glasgow14DayForecast = () => {
         }
 
         let dateStr = row[idxDate].replace(/"/g, '');
-        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
-        let dateVal = new Date(dateStr);
+        // Extract just the date part (YYYY-MM-DD) before the space or 'T'
+        if (dateStr.includes('T')) {
+          dateStr = dateStr.split('T')[0];
+        } else if (dateStr.includes(' ')) {
+          dateStr = dateStr.split(' ')[0];
+        }
+
+// Parse as UTC date to avoid timezone shifts
+const [year, month, day] = dateStr.split('-').map(Number);
+let dateVal = new Date(Date.UTC(year, month - 1, day));
+
+
+
+        
         if (isNaN(dateVal.getTime())) {
            const parts = dateStr.match(/(\d+)[/-](\d+)[/-](\d+)/);
            if (parts) {
