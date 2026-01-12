@@ -323,17 +323,26 @@ const LookbackReport = () => {
     if (lines.length < 2) return;
     
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    let idxDate = headers.findIndex(h => h === 'event date');
-    if (idxDate === -1) idxDate = headers.findIndex(h => h.includes('date') && !h.includes('created'));
-    const idxPaidAmount = headers.findIndex(h => h === 'paid_amount');
-    let idxVenue = headers.indexOf('venue');
-    if (idxVenue === -1) idxVenue = headers.indexOf('location');
+      
+      // UPDATED: Prioritize "event date" for arrival date, fallback to "date"
+      // When both exist, "event date" is the actual arrival, "date" is booking creation
+      let idxDate = headers.findIndex(h => h === 'event date' || h === 'event_date');
+      if (idxDate === -1) idxDate = headers.indexOf('date');
+      if (idxDate === -1) idxDate = headers.findIndex(h => h.includes('event') && h.includes('date'));
+      
+      const idxPaidAmount = headers.findIndex(h => h === 'paid_amount');
+      const idxPeople = headers.indexOf('people'); // ✅ ADDED: Track people/guests field
+      let idxVenue = headers.indexOf('venue');
+      if (idxVenue === -1) idxVenue = headers.indexOf('location');
 
     const parsedRows = [];
 
     lines.slice(1).forEach(line => {
       const row = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
-      const dateKey = parseDate(row[idxDate]);
+        
+        // UPDATED: Parse the "date" field which may include time
+        const dateStr = row[idxDate];
+        const dateKey = parseDate(dateStr);
       if (!dateKey) return;
       
       const paidAmount = parseFloat(row[idxPaidAmount]) || 0;
@@ -359,7 +368,11 @@ const LookbackReport = () => {
       // Use paid_amount divided by 1.2 to get ex-VAT (paid_amount includes VAT)
       let revenue = paidAmount / 1.2;
       
-      parsedRows.push({ date: dateKey, venue: normalizedVenue, income: revenue });
+        
+        // ✅ ADDED: Parse people/guests count
+        const people = idxPeople !== -1 ? (parseInt(row[idxPeople]) || 0) : 0;
+        
+        parsedRows.push({ date: dateKey, venue: normalizedVenue, income: revenue, people: people });
     });
     
     console.log('Booking Upload - Total rows:', parsedRows.length);
@@ -590,12 +603,17 @@ const LookbackReport = () => {
     const bookingMap = {};
     const salesMap = {};
     const timesheetMap = {};
+      const guestsMap = {}; // ✅ ADDED: Track total guests per date
 
     // 1. Filter and Aggregate Bookings
     bookingRows.forEach(row => {
       if (row.venue === targetVenue) {
         if (!bookingMap[row.date]) bookingMap[row.date] = 0;
         bookingMap[row.date] += row.income;
+        
+        // ✅ ADDED: Aggregate guests
+        if (!guestsMap[row.date]) guestsMap[row.date] = 0;
+        guestsMap[row.date] += row.people;
       }
     });
 
@@ -651,6 +669,7 @@ const LookbackReport = () => {
       const tIncome = bookingMap[date] || 0;
       const bIncome = salesMap[date] || 0;
       const r = timesheetMap[date] || { staff: 0 };
+        const guests = guestsMap[date] || 0; // ✅ ADDED: Get guests count
       
       // Get defaults for this date and venue
       const defaults = getDefaultCosts(targetVenue, date);
@@ -689,8 +708,9 @@ const LookbackReport = () => {
       const dayName = new Date(date).toLocaleDateString('en-GB', { weekday: 'short' });
 
       return {
-        date,
-        dayName,
+          date,
+          dayName,
+          guests, // ✅ ADDED: Include guests in returned data
         ticketIncome: tIncome,
         barIncome: bIncome,
         totalIncome,
@@ -724,6 +744,7 @@ const LookbackReport = () => {
 
     // Calculate totals
     const totals = venueData.reduce((acc, row) => ({
+      guests: acc.guests + row.guests, // ✅ ADDED: Sum guests
       ticketIncome: acc.ticketIncome + row.ticketIncome,
       barIncome: acc.barIncome + row.barIncome,
       totalIncome: acc.totalIncome + row.totalIncome,
@@ -737,6 +758,7 @@ const LookbackReport = () => {
       employerCosts: acc.employerCosts + row.employerCosts,
       totalLabor: acc.totalLabor + row.totalLabor
     }), {
+      guests: 0, // ✅ ADDED: Initialize guests to 0
       ticketIncome: 0,
       barIncome: 0,
       totalIncome: 0,
@@ -820,6 +842,7 @@ const LookbackReport = () => {
       // Add totals row
       tableData.push([
         'TOTALS',
+          totals.guests, // ✅ ADDED: Total guests
         `£${totals.ticketIncome.toFixed(0)}`,
         `£${totals.barIncome.toFixed(0)}`,
         `£${totals.totalIncome.toFixed(0)}`,
@@ -858,21 +881,22 @@ const LookbackReport = () => {
         headStyles: { fillColor: [99, 102, 241], textColor: 255, fontSize: 8 },
         styles: { fontSize: 7, cellPadding: 1.5 },
         columnStyles: {
-          0: { cellWidth: 18 },
-          1: { cellWidth: 18, halign: 'right' },
-          2: { cellWidth: 18, halign: 'right' },
-          3: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
-          4: { cellWidth: 18, halign: 'right' },
-          5: { cellWidth: 16, halign: 'right' },
-          6: { cellWidth: 16, halign: 'right' },
-          7: { cellWidth: 16, halign: 'right' },
-          8: { cellWidth: 16, halign: 'right' },
-          9: { cellWidth: 16, halign: 'right' },
-          10: { cellWidth: 18, halign: 'right' },
-          11: { cellWidth: 20, halign: 'right' },
-          12: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
-          13: { cellWidth: 18, halign: 'right', fontStyle: 'bold' }
-        },
+            0: { cellWidth: 16 },
+            1: { cellWidth: 12, halign: 'center' }, // ✅ ADDED: Guests column styling
+            2: { cellWidth: 16, halign: 'right' },
+            3: { cellWidth: 16, halign: 'right' },
+            4: { cellWidth: 18, halign: 'right', fontStyle: 'bold' },
+            5: { cellWidth: 16, halign: 'right' },
+            6: { cellWidth: 14, halign: 'right' },
+            7: { cellWidth: 14, halign: 'right' },
+            8: { cellWidth: 14, halign: 'right' },
+            9: { cellWidth: 14, halign: 'right' },
+            10: { cellWidth: 14, halign: 'right' },
+            11: { cellWidth: 16, halign: 'right' },
+            12: { cellWidth: 18, halign: 'right' },
+            13: { cellWidth: 18, halign: 'right', fontStyle: 'bold' },
+            14: { cellWidth: 16, halign: 'right', fontStyle: 'bold' }
+          },
         // Style the totals row differently
         didParseCell: function(data) {
           if (data.row.index === tableData.length - 1) {
@@ -916,6 +940,7 @@ const LookbackReport = () => {
             <thead className="bg-gray-50 text-gray-600 font-medium border-b">
               <tr>
                 <th className="px-3 py-3 w-28">Date</th>
+                  <th className="px-3 py-3 w-20 text-center bg-indigo-50 text-indigo-800">Guests</th>{/* ✅ ADDED: Guests column header */}
                 <th className="px-3 py-3 text-right bg-blue-50/50">Ticket (Ex)</th>
                 <th className="px-3 py-3 text-right bg-blue-50/50">Bar (Ex)</th>
                 <th className="px-3 py-3 text-right font-bold bg-blue-100 text-blue-900 border-r border-blue-200">Total Inc</th>
@@ -938,6 +963,10 @@ const LookbackReport = () => {
                     <div className="text-gray-900">{row.date}</div>
                     <div className="text-gray-400 text-[10px] uppercase">{row.dayName}</div>
                   </td>
+                    {/* ✅ ADDED: Guests data cell */}
+                    <td className="px-3 py-2 text-center font-bold text-indigo-700 bg-indigo-50/30">
+                      {row.guests > 0 ? row.guests : '-'}
+                    </td>
                   <td className="px-3 py-2 text-right">£{row.ticketIncome.toFixed(0)}</td>
                   <td className="px-3 py-2 text-right">£{row.barIncome.toFixed(0)}</td>
                   <td className="px-3 py-2 text-right font-bold text-blue-700 border-r border-gray-100">£{row.totalIncome.toFixed(0)}</td>
@@ -1034,6 +1063,7 @@ const LookbackReport = () => {
               {/* TOTALS ROW */}
               <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
                 <td className="px-3 py-3 text-gray-900">TOTALS</td>
+                  <td className="px-3 py-3 text-center bg-indigo-100 text-indigo-900">{totals.guests}</td>{/* ✅ ADDED: Total guests */}
                 <td className="px-3 py-3 text-right text-gray-900">£{totals.ticketIncome.toFixed(0)}</td>
                 <td className="px-3 py-3 text-right text-gray-900">£{totals.barIncome.toFixed(0)}</td>
                 <td className="px-3 py-3 text-right font-bold text-blue-900 border-r border-gray-300">£{totals.totalIncome.toFixed(0)}</td>
@@ -1550,7 +1580,10 @@ const Glasgow14DayForecast = () => {
 
       const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
       
+      // UPDATED: Prioritize "Event date" for arrival date, fallback to "date"
+      // When both exist, "Event date" is the actual arrival, "date" is booking creation
       let idxDate = headers.findIndex(h => h === 'event date');
+      if (idxDate === -1) idxDate = headers.indexOf('date');
       if (idxDate === -1) idxDate = headers.findIndex(h => h.includes('date') || h.includes('time'));
       const idxPeople = headers.findIndex(h => h.includes('people') || h.includes('guests') || h.includes('covers'));
       
