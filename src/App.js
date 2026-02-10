@@ -308,6 +308,7 @@ const ForecastTable = ({ data, showWeather }) => {
 const LookbackReport = () => {
   const [bookingRows, setBookingRows] = useState([]);
   const [salesRows, setSalesRows] = useState([]);
+  const [newcastleFoodRows, setNewcastleFoodRows] = useState({}); // actual food per date
   const [timesheetRows, setTimesheetRows] = useState({
     glasgow: [],
     edinburgh: [],
@@ -535,6 +536,77 @@ const LookbackReport = () => {
       console.log('Sales Excel Upload - Sample rows:', parsedRows.slice(0, 3));
 
       setSalesRows(parsedRows);
+
+      // ── PARSE SALES ITEMS TAB for actual Newcastle food totals ──────────────
+      // Build Sale ID → { date, outlet } from Sales tab
+      const saleIdDateMap = {};
+      data.forEach(row => {
+        const saleId = String(row['Sale ID'] || '').trim();
+        const dateRaw = row['Sale Date'] || row['Date'];
+        const dateKey = parseDate(dateRaw);
+        const outlet = (row['Outlet'] || row['Register'] || '').toLowerCase();
+        if (saleId && dateKey && outlet.includes('newcastle')) {
+          saleIdDateMap[saleId] = dateKey;
+        }
+      });
+
+      const itemsSheet = wb.Sheets['Sales Items'];
+      if (itemsSheet) {
+        const itemsData = XLSX.utils.sheet_to_json(itemsSheet, { header: 1, defval: '' });
+
+        // Find header row
+        let itemsHeaderIdx = 0;
+        for (let i = 0; i < itemsData.length; i++) {
+          if (itemsData[i].some(cell => String(cell).toLowerCase().includes('product name'))) {
+            itemsHeaderIdx = i;
+            break;
+          }
+        }
+
+        const itemsHeaders = itemsData[itemsHeaderIdx];
+        const itemsRows = itemsData.slice(itemsHeaderIdx + 1);
+
+        const saleIdIdx   = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('sale id'));
+        const categoryIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('category'));
+        const unitPriceIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('unit price'));
+        const quantityIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('quantity'));
+        const lineDiscIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('line discount'));
+        const saleDiscIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('sale discount'));
+        const totalIdx    = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('total'));
+
+        const foodByDate = {};
+
+        itemsRows.forEach(row => {
+          if (!row || row.length === 0) return;
+
+          const saleId = String(row[saleIdIdx] || '').trim();
+          const dateKey = saleIdDateMap[saleId];
+          if (!dateKey) return; // not Newcastle
+
+          const category = String(row[categoryIdx] || '');
+          if (!category.substring(0, 4).toLowerCase().includes('food')) return;
+
+          const quantity   = parseFloat(row[quantityIdx])  || 0;
+          const unitPrice  = parseFloat(row[unitPriceIdx]) || 0;
+          const lineDisc   = parseFloat(row[lineDiscIdx])  || 0;
+          const saleDisc   = parseFloat(row[saleDiscIdx])  || 0;
+          const isNonToken = category.toLowerCase().includes('non-token');
+          const totalDisc  = lineDisc + saleDisc;
+          const isToken    = !isNonToken && Math.abs(totalDisc - unitPrice * quantity) < 0.01;
+
+          // Value: tokens are £10 each, otherwise use Total column (inc VAT)
+          const valueIncVat = isToken
+            ? 10 * quantity
+            : (parseFloat(row[totalIdx]) || 0);
+
+          if (!foodByDate[dateKey]) foodByDate[dateKey] = 0;
+          foodByDate[dateKey] += valueIncVat;
+        });
+
+        console.log('Newcastle actual food by date:', foodByDate);
+        setNewcastleFoodRows(foodByDate);
+      }
+      // ────────────────────────────────────────────────────────────────────────
     };
     reader.readAsBinaryString(file);
   };
@@ -700,7 +772,18 @@ const LookbackReport = () => {
       // Note: r.staff already includes all wages from timesheets (FOH, Kitchen, Managers, etc.)
       const employerCosts = r.staff * 0.065;
 
-      const totalIncome = tIncome + bIncome;
+      // ✅ NEWCASTLE FOOD VENDOR ADJUSTMENT
+      // For Newcastle, adjust revenue to account for food vendor arrangement:
+      // Revenue = Total POS Sales - Food Takings (inc VAT) + (Food Takings × 20% commission)
+      // Uses actual food totals parsed from Sales Items tab - no estimation
+      let totalIncome = tIncome + bIncome;
+      if (targetVenue === 'newcastle') {
+        const actualFoodTakingsIncVat = newcastleFoodRows[date] || 0;
+        const actualFoodTakingsExVat = actualFoodTakingsIncVat / 1.2;
+        // bIncome is already ex-VAT, so we deduct ex-VAT food and add back 20% commission ex-VAT
+        totalIncome = tIncome + bIncome - actualFoodTakingsExVat + (actualFoodTakingsExVat * 0.20);
+      }
+      
       // Total Labor = Timesheets (Staff) + Employer Costs + Manual (Door+DJ+Clean+Agency+Manager) + Transfer
       const totalLabor = r.staff + employerCosts + doorCost + djCost + cleanCost + agencyCost + managerCost + transfer;
       const ratio = totalIncome > 0 ? (totalLabor / totalIncome) * 100 : 0;
@@ -1317,6 +1400,829 @@ const LookbackReport = () => {
 };
 
 // ============================================================================
+// NEWCASTLE FOOD VENDOR REPORT
+// ============================================================================
+
+const NewcastleFoodVendorReport = () => {
+  const [file, setFile] = useState(null);
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const POPCORN_WHITE = '#fdfee9';
+  const GLASGA_RED = '#f30050';
+  const BUCKY_GREEN = '#0ec981';
+
+  const isFoodToken = (row, headers) => {
+    const categoryIdx = headers.findIndex(h => h?.toLowerCase().includes('category'));
+    const lineDiscountIdx = headers.findIndex(h => h?.toLowerCase().includes('line discount'));
+    const saleDiscountIdx = headers.findIndex(h => h?.toLowerCase().includes('sale discount'));
+    const unitPriceIdx = headers.findIndex(h => h?.toLowerCase().includes('unit price'));
+    const quantityIdx = headers.findIndex(h => h?.toLowerCase().includes('quantity'));
+
+    if (categoryIdx === -1) return false;
+
+    const category = String(row[categoryIdx] || '');
+    if (!category.substring(0, 4).toLowerCase().includes('food')) {
+      return false;
+    }
+
+    const lineDiscount = parseFloat(row[lineDiscountIdx]) || 0;
+    const saleDiscount = parseFloat(row[saleDiscountIdx]) || 0;
+    const unitPrice = parseFloat(row[unitPriceIdx]) || 0;
+    const quantity = parseFloat(row[quantityIdx]) || 0;
+
+    const totalDiscount = lineDiscount + saleDiscount;
+    const totalPrice = unitPrice * quantity;
+
+    return Math.abs(totalDiscount - totalPrice) < 0.01;
+  };
+
+  const processData = async () => {
+    if (!file) {
+      setError('Please upload a file first');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        
+        // STEP 1: Parse SALES tab to get Sale ID → Outlet mapping
+        let salesSheet = wb.Sheets['Sales'];
+        if (!salesSheet) {
+          // Try first sheet if 'Sales' not found
+          salesSheet = wb.Sheets[wb.SheetNames[0]];
+        }
+        
+        const salesData = XLSX.utils.sheet_to_json(salesSheet, { header: 1, defval: '' });
+        let salesHeaderIndex = 0;
+        for(let i=0; i<salesData.length; i++) {
+          const row = salesData[i];
+          if (Array.isArray(row) && row.some(cell => String(cell).toLowerCase().includes('sale id'))) {
+            salesHeaderIndex = i;
+            break;
+          }
+        }
+        
+        const salesHeaders = salesData[salesHeaderIndex];
+        const salesRows = salesData.slice(salesHeaderIndex + 1);
+        
+        const saleIdIdx = salesHeaders.findIndex(h => String(h).toLowerCase().includes('sale id'));
+        const outletIdx = salesHeaders.findIndex(h => String(h).toLowerCase().includes('outlet'));
+        const saleDateIdx = salesHeaders.findIndex(h => String(h).toLowerCase().includes('sale date'));
+        
+        if (saleIdIdx === -1 || outletIdx === -1) {
+          throw new Error('Sales tab missing required columns: Sale ID, Outlet');
+        }
+        
+        // Build map: Sale ID → { outlet, date }
+        const saleIdMap = {};
+        salesRows.forEach(row => {
+          if (!row || row.length === 0) return;
+          const saleId = String(row[saleIdIdx] || '').trim();
+          const outlet = String(row[outletIdx] || '').toLowerCase();
+          const saleDate = row[saleDateIdx];
+          
+          if (saleId && outlet) {
+            saleIdMap[saleId] = { outlet, date: saleDate };
+          }
+        });
+        
+        console.log('Sales tab parsed:', Object.keys(saleIdMap).length, 'sale IDs');
+        
+        // STEP 2: Parse SALES ITEMS tab for food items
+        let itemsSheet = wb.Sheets['Sales Items'];
+        if (!itemsSheet) {
+          // Look for sheet with "item" in name
+          const itemSheetName = wb.SheetNames.find(name => name.toLowerCase().includes('item'));
+          if (itemSheetName) {
+            itemsSheet = wb.Sheets[itemSheetName];
+          }
+        }
+        
+        if (!itemsSheet) {
+          throw new Error('Could not find Sales Items sheet. Please ensure your export includes both Sales and Sales Items tabs.');
+        }
+        
+        const itemsData = XLSX.utils.sheet_to_json(itemsSheet, { header: 1, defval: '' });
+        let itemsHeaderIndex = 0;
+        for(let i=0; i<itemsData.length; i++) {
+          const row = itemsData[i];
+          if (Array.isArray(row) && row.some(cell => String(cell).toLowerCase().includes('category'))) {
+            itemsHeaderIndex = i;
+            break;
+          }
+        }
+
+        const itemsHeaders = itemsData[itemsHeaderIndex];
+        const itemsRows = itemsData.slice(itemsHeaderIndex + 1);
+
+        const itemSaleIdIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('sale id'));
+        const categoryIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('category'));
+        const productNameIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('product name'));
+        const quantityIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('quantity'));
+        const totalIdx = itemsHeaders.findIndex(h => String(h).toLowerCase().includes('total'));
+
+        if (itemSaleIdIdx === -1 || categoryIdx === -1 || quantityIdx === -1 || totalIdx === -1) {
+          throw new Error('Sales Items tab missing required columns: Sale ID, Category, Quantity, Total');
+        }
+
+        if (productNameIdx === -1) {
+          throw new Error('Sales Items tab missing "Product Name" column');
+        }
+
+        const itemSales = {};
+        const dailySales = {}; // NEW: Track sales by date
+        let earliestDate = null;
+        let latestDate = null;
+        let totalTokens = 0;
+        let totalCardSales = 0;
+        let newcastleItemsFound = 0;
+        let foodItemsFound = 0;
+
+        itemsRows.forEach(row => {
+          if (!row || row.length === 0) return;
+
+          // Get Sale ID and lookup outlet
+          const saleId = String(row[itemSaleIdIdx] || '').trim();
+          const saleInfo = saleIdMap[saleId];
+          
+          if (!saleInfo) return; // Sale ID not found in Sales tab
+          
+          // Filter for Newcastle only
+          if (!saleInfo.outlet.includes('newcastle')) return;
+          newcastleItemsFound++;
+          
+          // Check if it's a food item
+          const category = String(row[categoryIdx] || '');
+          if (!category.substring(0, 4).toLowerCase().includes('food')) return;
+          foodItemsFound++;
+
+          const productName = row[productNameIdx] || category;
+          const quantity = parseFloat(row[quantityIdx]) || 0;
+          
+          // Check if this is explicitly non-token food
+          const isNonTokenFood = category.toLowerCase().includes('non-token');
+          
+          // Only apply token detection if NOT explicitly marked as non-token
+          const isToken = !isNonTokenFood && isFoodToken(row, itemsHeaders);
+          const value = isToken ? (10 * quantity) : (parseFloat(row[totalIdx]) || 0);
+
+          // Track dates from sale info
+          let dateKey = null;
+          if (saleInfo.date) {
+            const date = new Date(saleInfo.date);
+            if (!isNaN(date)) {
+              if (!earliestDate || date < earliestDate) earliestDate = date;
+              if (!latestDate || date > latestDate) latestDate = date;
+              dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            }
+          }
+
+          if (isToken) {
+            totalTokens += quantity * 10;  // Each token is £10
+          } else {
+            totalCardSales += value;
+          }
+
+          // Aggregate by product (overall)
+          if (!itemSales[productName]) {
+            itemSales[productName] = { quantity: 0, total: 0, isToken: isToken };
+          }
+          itemSales[productName].quantity += quantity;
+          itemSales[productName].total += value;
+
+          // NEW: Aggregate by date and product
+          if (dateKey) {
+            if (!dailySales[dateKey]) {
+              dailySales[dateKey] = {};
+            }
+            if (!dailySales[dateKey][productName]) {
+              dailySales[dateKey][productName] = { quantity: 0, total: 0 };
+            }
+            dailySales[dateKey][productName].quantity += quantity;
+            dailySales[dateKey][productName].total += value;
+          }
+        });
+
+        console.log('Newcastle items found:', newcastleItemsFound);
+        console.log('Food items found:', foodItemsFound);
+        console.log('Days with sales:', Object.keys(dailySales).length);
+
+        if (foodItemsFound === 0) {
+          throw new Error(`No food items found for Newcastle. Found ${newcastleItemsFound} Newcastle items total, but none were categorized as Food.`);
+        }
+
+        const salesArray = Object.entries(itemSales).map(([product, data]) => ({
+          item: product,
+          quantity: data.quantity,
+          total: data.total
+        })).sort((a, b) => b.total - a.total);
+
+        // NEW: Convert daily sales to array format
+        const dailyBreakdown = Object.entries(dailySales).map(([date, products]) => {
+          const itemsArray = Object.entries(products).map(([product, data]) => ({
+            item: product,
+            quantity: data.quantity,
+            total: data.total
+          })).sort((a, b) => b.quantity - a.quantity); // Sort by quantity sold
+
+          const dayTotal = itemsArray.reduce((sum, item) => sum + item.total, 0);
+          
+          return {
+            date,
+            items: itemsArray,
+            dayTotal
+          };
+        }).sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort chronologically
+
+        const totalFoodTakings = totalTokens + totalCardSales;
+        const vendorPayment = totalFoodTakings * 0.80;
+        const commission = totalFoodTakings * 0.20;
+
+        setReportData({
+          sales: salesArray,
+          dailyBreakdown, // NEW: Daily breakdown data
+          totalFoodTakings,
+          vendorPayment,
+          commission,
+          totalTokens,
+          totalCardSales,
+          weekStart: earliestDate,
+          weekEnd: latestDate
+        });
+        setLoading(false);
+      };
+      reader.readAsBinaryString(file);
+    } catch (err) {
+      setError(`Error processing file: ${err.message}`);
+      setLoading(false);
+    }
+  };
+
+  const generatePDF = async () => {
+    if (!reportData) return;
+
+    try {
+      // Check if jsPDF is already loaded
+      if (!window.jspdf) {
+        const script1 = document.createElement('script');
+        script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        document.head.appendChild(script1);
+        
+        await new Promise((resolve, reject) => {
+          script1.onload = resolve;
+          script1.onerror = reject;
+        });
+        
+        const script2 = document.createElement('script');
+        script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+        document.head.appendChild(script2);
+        
+        await new Promise((resolve, reject) => {
+          script2.onload = resolve;
+          script2.onerror = reject;
+        });
+        
+        // Give it a moment to initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      const { jsPDF } = window.jspdf;
+      
+      if (!jsPDF) {
+        throw new Error('jsPDF failed to load. Please refresh and try again.');
+      }
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+
+      doc.setFillColor(253, 254, 233);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+      doc.setFontSize(24);
+      doc.setTextColor(243, 0, 80);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FAYRE PLAY', pageWidth / 2, 20, { align: 'center' });
+
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Newcastle Food Vendor Weekly Report', pageWidth / 2, 30, { align: 'center' });
+
+      if (reportData.weekStart && reportData.weekEnd) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const weekText = `Week: ${reportData.weekStart.toLocaleDateString('en-GB')} - ${reportData.weekEnd.toLocaleDateString('en-GB')}`;
+        doc.text(weekText, pageWidth / 2, 38, { align: 'center' });
+      }
+
+      let currentY = 48;
+
+      // FINANCIAL SUMMARY - first
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Financial Summary', 15, currentY);
+      currentY += 8;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      const summaryLines = [
+        { label: 'Food Card Sales:', value: `£${reportData.totalCardSales.toFixed(2)}`, bold: false, color: null },
+        { label: 'Food Token Sales:', value: `£${reportData.totalTokens.toFixed(2)}`, bold: false, color: null },
+        { label: 'Total Food Takings (inc VAT):', value: `£${reportData.totalFoodTakings.toFixed(2)}`, bold: true, color: [0, 0, 0] },
+        { label: 'Vendor Payment (80%):', value: `£${reportData.vendorPayment.toFixed(2)}`, bold: true, color: [14, 201, 129] },
+        { label: 'Commission (20%):', value: `£${reportData.commission.toFixed(2)}`, bold: true, color: [243, 0, 80] },
+      ];
+
+      summaryLines.forEach((line, idx) => {
+        if (idx === 2) { // Draw separator before Total
+          doc.setDrawColor(200, 200, 200);
+          doc.line(15, currentY - 2, pageWidth - 15, currentY - 2);
+        }
+        if (idx === 3) { // Draw separator before Vendor Payment
+          doc.setDrawColor(14, 201, 129);
+          doc.line(15, currentY - 2, pageWidth - 15, currentY - 2);
+        }
+        if (line.bold) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+        }
+        if (line.color) {
+          doc.setTextColor(...line.color);
+        } else {
+          doc.setTextColor(80, 80, 80);
+        }
+        doc.text(line.label, 15, currentY);
+        doc.text(line.value, pageWidth - 15, currentY, { align: 'right' });
+        currentY += 7;
+      });
+
+      currentY += 8;
+
+      // DAILY BREAKDOWN SECTION
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Daily Breakdown', 15, currentY);
+      currentY += 5;
+
+      if (reportData.dailyBreakdown && reportData.dailyBreakdown.length > 0) {
+        reportData.dailyBreakdown.forEach((day, dayIdx) => {
+          // Check if we need a new page
+          if (currentY > pageHeight - 40) {
+            doc.addPage();
+            doc.setFillColor(253, 254, 233);
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            currentY = 20;
+          }
+          const dayDate = new Date(day.date);
+          const dayName = dayDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+
+          // Day header
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(243, 0, 80);
+          doc.text(`${dayName} - £${day.dayTotal.toFixed(2)}`, 15, currentY);
+          currentY += 3;
+
+          // Items table for this day
+          const dayTableData = day.items.map(item => [
+            item.item,
+            item.quantity.toString(),
+            `£${item.total.toFixed(2)}`
+          ]);
+
+          doc.autoTable({
+            startY: currentY,
+            head: [['Item', 'Qty', 'Total']],
+            body: dayTableData,
+            theme: 'plain',
+            headStyles: {
+              fillColor: [243, 0, 80],
+              textColor: [255, 255, 255],
+              fontStyle: 'bold',
+              fontSize: 8
+            },
+            styles: {
+              fontSize: 8,
+              cellPadding: 1.5
+            },
+            columnStyles: {
+              0: { cellWidth: 120 },
+              1: { halign: 'center', cellWidth: 25 },
+              2: { halign: 'right', cellWidth: 30 }
+            },
+            margin: { left: 20 },
+            didAddPage: () => {
+              doc.setFillColor(253, 254, 233);
+              doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            }
+          });
+
+          currentY = doc.lastAutoTable.finalY + 5;
+        });
+      }
+
+      currentY += 5;
+
+      // Check if we need a new page for summary
+      if (currentY > pageHeight - 80) {
+        doc.addPage();
+        doc.setFillColor(253, 254, 233);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        currentY = 20;
+      }
+
+      // WEEKLY SUMMARY SECTION
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Weekly Summary - All Items', 15, currentY);
+      currentY += 5;
+
+      const tableData = reportData.sales.map(item => [
+        item.item,
+        item.quantity.toString(),
+        `£${item.total.toFixed(2)}`
+      ]);
+
+      doc.autoTable({
+        startY: currentY,
+        head: [['Item', 'Total Qty', 'Total (inc VAT)']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [14, 201, 129],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        styles: {
+          fontSize: 9
+        },
+        columnStyles: {
+          0: { cellWidth: 100 },
+          1: { halign: 'center', cellWidth: 40 },
+          2: { halign: 'right', cellWidth: 40 }
+        },
+        didAddPage: () => {
+          doc.setFillColor(253, 254, 233);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        }
+      });
+
+      currentY = doc.lastAutoTable.finalY + 10;
+
+      // Footer on last page
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Generated by Fayre Play Newcastle Food Vendor Report', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+      const weekStart = reportData.weekStart ? reportData.weekStart.toLocaleDateString('en-GB').replace(/\//g, '-') : 'unknown';
+      doc.save(`Food_Vendor_Report_${weekStart}.pdf`);
+      
+    } catch (err) {
+      console.error('PDF Generation Error:', err);
+      alert('Error generating PDF: ' + err.message + '. Please refresh the page and try again.');
+    }
+  };
+
+  return (
+    <div style={{ backgroundColor: POPCORN_WHITE, minHeight: '100vh', padding: '20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${GLASGA_RED} 0%, ${BUCKY_GREEN} 100%)`,
+          borderRadius: '12px',
+          padding: '30px',
+          marginBottom: '30px',
+          color: 'white'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+            <FileText size={40} />
+            <div>
+              <h1 style={{ margin: 0, fontSize: '32px', fontWeight: 'bold' }}>Newcastle Food Vendor Report</h1>
+              <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>Weekly sales breakdown and commission calculation</p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '2px dashed #0ec981',
+          padding: '40px',
+          textAlign: 'center',
+          marginBottom: '30px'
+        }}>
+          <Upload size={48} style={{ color: BUCKY_GREEN, margin: '0 auto 20px' }} />
+          <h3 style={{ marginBottom: '10px' }}>Upload POS Sales Report</h3>
+          <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
+            Upload your weekly SumUp POS export (Excel format)
+          </p>
+          
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) => {
+              setFile(e.target.files[0]);
+              setReportData(null);
+              setError(null);
+            }}
+            style={{ display: 'none' }}
+            id="food-vendor-file-upload"
+          />
+          <label
+            htmlFor="food-vendor-file-upload"
+            style={{
+              display: 'inline-block',
+              backgroundColor: BUCKY_GREEN,
+              color: 'white',
+              padding: '12px 30px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              border: 'none'
+            }}
+          >
+            Choose File
+          </label>
+
+          {file && (
+            <div style={{
+              marginTop: '20px',
+              padding: '15px',
+              backgroundColor: '#e8f5e9',
+              borderRadius: '8px',
+              border: '1px solid #0ec981'
+            }}>
+              <p style={{ margin: 0, color: '#2e7d32' }}>✓ {file.name}</p>
+            </div>
+          )}
+
+          {file && (
+            <button
+              onClick={processData}
+              disabled={loading}
+              style={{
+                marginTop: '20px',
+                backgroundColor: GLASGA_RED,
+                color: 'white',
+                padding: '12px 30px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              {loading ? 'Processing...' : 'Generate Report'}
+            </button>
+          )}
+
+          {error && (
+            <div style={{
+              marginTop: '20px',
+              padding: '15px',
+              backgroundColor: '#ffebee',
+              borderRadius: '8px',
+              border: '1px solid #f30050',
+              color: '#c62828'
+            }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        {reportData && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '30px', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>Report Preview</h2>
+              <button
+                onClick={generatePDF}
+                style={{
+                  backgroundColor: GLASGA_RED,
+                  color: 'white',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Download size={20} />
+                Download PDF
+              </button>
+            </div>
+
+            {reportData.weekStart && reportData.weekEnd && (
+              <div style={{
+                backgroundColor: '#e3f2fd',
+                padding: '15px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <Calendar size={20} style={{ color: '#1976d2' }} />
+                <span style={{ fontWeight: 'bold' }}>
+                  Week: {reportData.weekStart.toLocaleDateString('en-GB')} - {reportData.weekEnd.toLocaleDateString('en-GB')}
+                </span>
+              </div>
+            )}
+
+            {/* FINANCIAL SUMMARY - shown first */}
+            <div style={{
+              backgroundColor: '#f5f5f5',
+              padding: '20px',
+              borderRadius: '8px',
+              border: '2px solid #e0e0e0',
+              marginBottom: '30px'
+            }}>
+              <h3 style={{ marginTop: 0 }}>💰 Financial Summary</h3>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Food Card Sales:</span>
+                  <span style={{ fontWeight: 'bold' }}>£{reportData.totalCardSales.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Food Token Sales:</span>
+                  <span style={{ fontWeight: 'bold' }}>£{reportData.totalTokens.toFixed(2)}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  paddingTop: '10px',
+                  borderTop: '2px solid #ccc',
+                  fontSize: '18px'
+                }}>
+                  <span style={{ fontWeight: 'bold' }}>Total Food Takings (inc VAT):</span>
+                  <span style={{ fontWeight: 'bold' }}>£{reportData.totalFoodTakings.toFixed(2)}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  paddingTop: '15px',
+                  marginTop: '5px',
+                  borderTop: '2px solid #0ec981',
+                  fontSize: '18px',
+                  color: BUCKY_GREEN
+                }}>
+                  <span style={{ fontWeight: 'bold' }}>Vendor Payment (80%):</span>
+                  <span style={{ fontWeight: 'bold' }}>£{reportData.vendorPayment.toFixed(2)}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '18px',
+                  color: GLASGA_RED
+                }}>
+                  <span style={{ fontWeight: 'bold' }}>Your Commission (20%):</span>
+                  <span style={{ fontWeight: 'bold' }}>£{reportData.commission.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* DAILY BREAKDOWN */}
+            {reportData.dailyBreakdown && reportData.dailyBreakdown.length > 0 && (
+              <div style={{ marginBottom: '30px' }}>
+                <h3 style={{ color: GLASGA_RED, marginBottom: '15px' }}>📅 Daily Breakdown</h3>
+                {reportData.dailyBreakdown.map((day, dayIdx) => {
+                  const dayDate = new Date(day.date);
+                  const dayName = dayDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+                  
+                  return (
+                    <div key={dayIdx} style={{
+                      backgroundColor: dayIdx % 2 === 0 ? '#f9f9f9' : 'white',
+                      padding: '15px',
+                      borderRadius: '8px',
+                      marginBottom: '10px',
+                      border: '1px solid #e0e0e0'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '10px',
+                        paddingBottom: '10px',
+                        borderBottom: '2px solid ' + GLASGA_RED
+                      }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{dayName}</span>
+                        <span style={{ fontWeight: 'bold', fontSize: '16px', color: BUCKY_GREEN }}>
+                          £{day.dayTotal.toFixed(2)}
+                        </span>
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f5f5f5' }}>
+                            <th style={{ padding: '8px', textAlign: 'left', fontSize: '12px' }}>Item</th>
+                            <th style={{ padding: '8px', textAlign: 'center', fontSize: '12px' }}>Qty</th>
+                            <th style={{ padding: '8px', textAlign: 'right', fontSize: '12px' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {day.items.map((item, itemIdx) => (
+                            <tr key={itemIdx}>
+                              <td style={{ padding: '6px', fontSize: '13px' }}>{item.item}</td>
+                              <td style={{ padding: '6px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
+                                {item.quantity}
+                              </td>
+                              <td style={{ padding: '6px', textAlign: 'right', fontSize: '13px' }}>
+                                £{item.total.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* WEEKLY SUMMARY TABLE */}
+            <h3 style={{ color: BUCKY_GREEN, marginBottom: '15px' }}>📊 Weekly Summary - All Items</h3>
+            <div style={{ overflowX: 'auto', marginBottom: '10px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: BUCKY_GREEN, color: 'white' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Item</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Total Quantity</th>
+                    <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Total (inc VAT)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.sales.map((item, idx) => (
+                    <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
+                      <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{item.item}</td>
+                      <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
+                        {item.quantity}
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>£{item.total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          border: '1px solid #e0e0e0'
+        }}>
+          <h3 style={{ marginTop: 0, color: GLASGA_RED }}>How to Use</h3>
+          <ol style={{ lineHeight: '1.8', color: '#555' }}>
+            <li>Export your weekly POS sales report from SumUp (Excel format)</li>
+            <li><strong>Important:</strong> Ensure your export includes BOTH the "Sales" and "Sales Items" tabs</li>
+            <li>Upload the file using the button above</li>
+            <li>Click "Generate Report" to process the data</li>
+            <li>Review the preview and download the PDF report</li>
+          </ol>
+          <div style={{
+            marginTop: '20px',
+            padding: '15px',
+            backgroundColor: '#fff3e0',
+            borderRadius: '8px',
+            border: '1px solid #ff6f00'
+          }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}>
+              <strong>💡 How it works:</strong>
+            </p>
+            <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px' }}>
+              <li>Reads <strong>Sales</strong> tab to identify Newcastle transactions</li>
+              <li>Reads <strong>Sales Items</strong> tab to get food product details</li>
+              <li>Matches by Sale ID to filter Newcastle food only</li>
+              <li>Uses <strong>Product Name</strong> column for item names</li>
+              <li>Detects tokens: items with full discount = £10 value × quantity</li>
+              <li>Excludes <strong>"Food -&gt; Non-token food"</strong> from token detection</li>
+              <li>All non-token food items use actual sale value from Total column</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -1324,6 +2230,7 @@ const Glasgow14DayForecast = () => {
   const [user, setUser] = useState(null);
   const [venue, setVenue] = useState('glasgow');
   const [mode, setMode] = useState('forecast');
+  const [activeView, setActiveView] = useState('forecast'); // 'forecast', 'lookback', or 'food-vendor'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadStats, setUploadStats] = useState(null);
@@ -1938,22 +2845,28 @@ const Glasgow14DayForecast = () => {
               <h1 className="text-xl font-bold leading-none">Forecast Tool</h1>
               <p className="text-xs text-gray-500 mt-1">
                 <button 
-                  onClick={() => setMode('forecast')} 
-                  className={`px-3 py-1 rounded-md text-sm mr-2 ${mode === 'forecast' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+                  onClick={() => setActiveView('forecast')} 
+                  className={`px-3 py-1 rounded-md text-sm mr-2 ${activeView === 'forecast' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
                   Forecast
                 </button>
                 <button 
-                  onClick={() => setMode('lookback')} 
-                  className={`px-3 py-1 rounded-md text-sm ${mode === 'lookback' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+                  onClick={() => setActiveView('lookback')} 
+                  className={`px-3 py-1 rounded-md text-sm mr-2 ${activeView === 'lookback' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
                   Lookback (Actuals)
+                </button>
+                <button 
+                  onClick={() => setActiveView('food-vendor')} 
+                  className={`px-3 py-1 rounded-md text-sm ${activeView === 'food-vendor' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Food Vendor Report
                 </button>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {mode === 'forecast' && (
+            {activeView === 'forecast' && (
               <select value={venue} onChange={e => setVenue(e.target.value)} className="bg-gray-100 text-sm font-semibold rounded-lg px-4 py-2 hover:bg-gray-200 cursor-pointer">
                 {Object.values(VENUES).map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
@@ -1967,7 +2880,9 @@ const Glasgow14DayForecast = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         
-        {mode === 'lookback' ? (
+        {activeView === 'food-vendor' ? (
+          <NewcastleFoodVendorReport />
+        ) : activeView === 'lookback' ? (
           <LookbackReport />
         ) : (
           /* EXISTING FORECAST UI */
