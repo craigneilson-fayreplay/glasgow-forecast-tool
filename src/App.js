@@ -1704,6 +1704,17 @@ const NewcastleFoodVendorReport = () => {
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
 
+      // Hook into jsPDF's internal addPage to ALWAYS set background
+      const originalAddPage = doc.addPage;
+      doc.addPage = function(...args) {
+        const result = originalAddPage.apply(this, args);
+        // Set popcorn white background on newly added page
+        this.setFillColor(253, 254, 233);
+        this.rect(0, 0, pageWidth, pageHeight, 'F');
+        return result;
+      };
+
+      // Set background on first page
       doc.setFillColor(253, 254, 233);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
