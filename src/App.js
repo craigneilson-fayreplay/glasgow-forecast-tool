@@ -2528,30 +2528,14 @@ const Glasgow14DayForecast = () => {
         }
         let dateStr = row[idxDate].replace(/"/g, '').trim();
 
-        // Handle different date formats
-        let dateVal;
+        // Use the same parseDate function as the Lookback tool
+        const dateKey = parseDate(dateStr);
+        if (!dateKey) continue;
 
-        if (dateStr.includes(' ')) {
-          // Format: "2026-01-08 17:00:00" - extract just the date part
-          dateStr = dateStr.split(' ')[0];
-        } else if (dateStr.includes('T')) {
-          // Format: "2026-01-08T17:00:00" - extract just the date part
-          dateStr = dateStr.split('T')[0];
-        }
-
-        // Now dateStr should be "YYYY-MM-DD"
-        // Parse it carefully to avoid timezone issues
-        const dateParts = dateStr.split('-').map(Number);
-        if (dateParts.length !== 3 || !dateParts[0] || !dateParts[1] || !dateParts[2]) continue; // Skip if parsing failed
-
-        const [year, month, day] = dateParts;
-
-        // Create date at noon local time to avoid any timezone boundary issues
-        dateVal = new Date(year, month - 1, day, 12, 0, 0);
-
+        // Create date object for day-of-week checks
+        const dateParts = dateKey.split('-').map(Number);
+        const dateVal = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 12, 0, 0);
         if (isNaN(dateVal.getTime())) continue;
-
-        const dateKey = dateVal.toISOString().split('T')[0];
 
 
         
