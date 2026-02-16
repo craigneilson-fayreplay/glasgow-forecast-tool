@@ -325,10 +325,10 @@ const LookbackReport = () => {
     
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
       
-      // UPDATED: Prioritize "event date" for arrival date, fallback to "date"
-      // When both exist, "event date" is the actual arrival, "date" is booking creation
-      let idxDate = headers.findIndex(h => h === 'event date' || h === 'event_date');
-      if (idxDate === -1) idxDate = headers.indexOf('date');
+      // FIXED: Prioritize "date" column (has reliable datetime) over "Event date" (can be stale)
+      // When bookings are modified, Booked.it updates "date" but sometimes fails to update "Event date"
+      let idxDate = headers.indexOf('date');
+      if (idxDate === -1) idxDate = headers.findIndex(h => h === 'event date' || h === 'event_date');
       if (idxDate === -1) idxDate = headers.findIndex(h => h.includes('event') && h.includes('date'));
       
       const idxPaidAmount = headers.findIndex(h => h === 'paid_amount');
@@ -1744,14 +1744,6 @@ const NewcastleFoodVendorReport = () => {
       ];
 
       summaryLines.forEach((line, idx) => {
-        if (idx === 2) { // Draw separator before Total
-          doc.setDrawColor(200, 200, 200);
-          doc.line(15, currentY - 2, pageWidth - 15, currentY - 2);
-        }
-        if (idx === 3) { // Draw separator before Vendor Payment
-          doc.setDrawColor(14, 201, 129);
-          doc.line(15, currentY - 2, pageWidth - 15, currentY - 2);
-        }
         if (line.bold) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(11);
@@ -1817,7 +1809,11 @@ const NewcastleFoodVendorReport = () => {
             },
             styles: {
               fontSize: 8,
-              cellPadding: 1.5
+              cellPadding: 1.5,
+              fillColor: [253, 254, 233]
+            },
+            alternateRowStyles: {
+              fillColor: [253, 254, 233]
             },
             columnStyles: {
               0: { cellWidth: 120 },
@@ -1825,7 +1821,8 @@ const NewcastleFoodVendorReport = () => {
               2: { halign: 'right', cellWidth: 30 }
             },
             margin: { left: 20 },
-            didAddPage: () => {
+            didAddPage: (data) => {
+              // Draw background FIRST on new pages
               doc.setFillColor(253, 254, 233);
               doc.rect(0, 0, pageWidth, pageHeight, 'F');
             }
@@ -1869,14 +1866,19 @@ const NewcastleFoodVendorReport = () => {
           fontStyle: 'bold'
         },
         styles: {
-          fontSize: 9
+          fontSize: 9,
+          fillColor: [253, 254, 233]
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 225]
         },
         columnStyles: {
           0: { cellWidth: 100 },
           1: { halign: 'center', cellWidth: 40 },
           2: { halign: 'right', cellWidth: 40 }
         },
-        didAddPage: () => {
+        didAddPage: (data) => {
+          // Draw background FIRST on new pages
           doc.setFillColor(253, 254, 233);
           doc.rect(0, 0, pageWidth, pageHeight, 'F');
         }
@@ -2079,7 +2081,6 @@ const NewcastleFoodVendorReport = () => {
                   justifyContent: 'space-between',
                   paddingTop: '15px',
                   marginTop: '5px',
-                  borderTop: '2px solid #0ec981',
                   fontSize: '18px',
                   color: BUCKY_GREEN
                 }}>
