@@ -333,6 +333,7 @@ const LookbackReport = () => {
       
       const idxPaidAmount = headers.findIndex(h => h === 'paid_amount');
       const idxPeople = headers.indexOf('people'); // ✅ ADDED: Track people/guests field
+      const idxUserId = headers.indexOf('user_id'); // ✅ ADDED: Track user_id to exclude walk-ins
       let idxVenue = headers.indexOf('venue');
       if (idxVenue === -1) idxVenue = headers.indexOf('location');
 
@@ -369,8 +370,16 @@ const LookbackReport = () => {
       // Skip rows with unrecognized venues
       if (!normalizedVenue) return;
       
-      // Use paid_amount divided by 1.2 to get ex-VAT (paid_amount includes VAT)
-      let revenue = paidAmount / 1.2;
+      // Walk-ins have blank user_id - set revenue to 0 to avoid double-counting with POS
+      // but still count their people/guests
+      const userId = idxUserId !== -1 ? (row[idxUserId] || '').trim() : '';
+      let revenue = 0;
+      
+      if (userId && userId !== '0') {
+        // Advance booking - use paid_amount divided by 1.2 to get ex-VAT
+        revenue = paidAmount / 1.2;
+      }
+      // else: walk-in, revenue stays 0
       
         
         // ✅ ADDED: Parse people/guests count
