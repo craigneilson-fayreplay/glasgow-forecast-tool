@@ -353,6 +353,9 @@ const LookbackReport = () => {
       
       let rowVenue = (row[idxVenue] || '').toLowerCase();
       
+      // Skip gift card purchases (not venue bookings)
+      if (rowVenue.includes('gift')) return;
+      
       // Normalize venue names - use exact matches
       let normalizedVenue = null;
       if (rowVenue.includes('kinning') || rowVenue.includes('glasgow')) {
@@ -2526,7 +2529,18 @@ const Glasgow14DayForecast = () => {
         if (idxVenue > -1 && row[idxVenue]) {
            rowVenue = row[idxVenue].toLowerCase();
         }
-        let dateStr = row[idxDate].replace(/"/g, '').trim();
+        
+        // Skip gift card purchases (not venue bookings)
+        if (rowVenue.includes('gift')) continue;
+        
+        // Get date - use Event date if available, otherwise use date column
+        const idxDateAlt = headers.indexOf('date');
+        let dateStr = row[idxDate] ? row[idxDate].replace(/"/g, '').trim() : '';
+        
+        // If Event date is empty but date column exists, use that instead
+        if (!dateStr && idxDateAlt !== -1) {
+          dateStr = row[idxDateAlt].replace(/"/g, '').trim();
+        }
 
         // Use the same parseDate function as the Lookback tool
         const dateKey = parseDate(dateStr);
