@@ -2399,7 +2399,8 @@ const Glasgow14DayForecast = () => {
       // Budget = 25% of revenue (target labor ratio)
       const minDailyBudget = MINIMUM_DAILY_BUDGETS[venue] ? (MINIMUM_DAILY_BUDGETS[venue][dayOfWeek] || 131) : 131;
       const incomeBasedBudget = revenue * (FINANCIALS.TARGET_LABOR_PCT / 100); // 25% of revenue
-      const budget = Math.max(incomeBasedBudget, minDailyBudget);
+      const maxDailyBudget = 2000; // Maximum daily budget cap
+      const budget = Math.min(Math.max(incomeBasedBudget, minDailyBudget), maxDailyBudget);
 
       // Step B: Calculate Staff Hours based on Budget
       const staffHours = Math.round(budget / FINANCIALS.BUDGET_DIVISOR);
