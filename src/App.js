@@ -15,9 +15,9 @@ const GOOGLE_CLIENT_ID = '774728510184-cbmd5chb33iq3r89r51pnmkmpsont4u4.apps.goo
 const ALLOWED_DOMAIN = '@thefayreplay.co.uk';
 
 const VENUES = {
-  glasgow: { id: 'glasgow', name: 'Glasgow', lat: 55.8642, lon: -4.2518, capacity: 475 },
-  edinburgh: { id: 'edinburgh', name: 'Edinburgh', lat: 55.9533, lon: -3.1883, capacity: 450 },
-  newcastle: { id: 'newcastle', name: 'Newcastle', lat: 54.9783, lon: -1.6178, capacity: 450 }
+  glasgow: { id: 'glasgow', name: 'Glasgow', lat: 55.8642, lon: -4.2518, capacity: 550 },
+  edinburgh: { id: 'edinburgh', name: 'Edinburgh', lat: 55.9533, lon: -3.1883, capacity: 550 },
+  newcastle: { id: 'newcastle', name: 'Newcastle', lat: 54.9783, lon: -1.6178, capacity: 600 }
 };
 
 // Standard Operating Days (0=Sun, 1=Mon, ..., 6=Sat)
@@ -53,7 +53,7 @@ const FINANCIALS = {
 const MINIMUM_DAILY_BUDGETS = {
   glasgow: { 0: 700, 1: 131, 2: 131, 3: 200, 4: 500, 5: 650, 6: 850 },
   edinburgh: { 0: 700, 1: 131, 2: 131, 3: 600, 4: 600, 5: 650, 6: 850 },
-  newcastle: { 0: 1000, 1: 750, 2: 750, 3: 750, 4: 750, 5: 1000, 6: 1600 }
+  newcastle: { 0: 700, 1: 750, 2: 750, 3: 750, 4: 750, 5: 1000, 6: 1600 }
 };
 
 // Default Door Staff Costs by Venue and Day (0=Sun, 1=Mon, ..., 6=Sat)
@@ -98,6 +98,18 @@ const MULTIPLIERS = {
     5: { day14: 5.5, day7: 3.5, day3: 2.3, day1: 1.7 },  // Friday
     6: { day14: 7.5, day7: 3.8, day3: 2.3, day1: 1.7 }   // Saturday
   },
+  newcastle: {
+    // Newcastle: 44% same-day walk-ins, 7-day operation, school holiday sensitive
+    // Fri/Sat D-6 and under are handled by the tiered model (getNewcastleTieredForecast)
+    // These standard multipliers apply to D-7+ for all days, and D-7+ for Fri/Sat
+    0: { day14: 8.5,  day7: 4.0,  day3: 2.5,  day1: 1.8 },  // Sunday
+    1: { day14: 5.5,  day7: 3.0,  day3: 1.8,  day1: 1.4 },  // Monday
+    2: { day14: 5.5,  day7: 3.0,  day3: 1.8,  day1: 1.4 },  // Tuesday
+    3: { day14: 4.5,  day7: 2.8,  day3: 1.7,  day1: 1.3 },  // Wednesday
+    4: { day14: 6.5,  day7: 3.5,  day3: 2.0,  day1: 1.5 },  // Thursday
+    5: { day14: 9.3,  day7: 4.5,  day3: 2.5,  day1: 1.8 },  // Friday  (tiered model takes over D-6-)
+    6: { day14: 6.6,  day7: 3.5,  day3: 2.2,  day1: 1.6 }   // Saturday (tiered model takes over D-6-)
+  },
   default: {
     0: { day14: 5.0, day7: 3.0, day3: 2.0, day1: 1.5 },
     1: { day14: 3.0, day7: 2.0, day3: 1.5, day1: 1.2 },
@@ -110,8 +122,83 @@ const MULTIPLIERS = {
 };
 
 // ============================================================================
-// UTILITIES
+// NEWCASTLE TIERED FORECAST MODEL (Fri/Sat, calibrated Feb 2026)
+// Based on 25-week dataset Sep 2025–Feb 2026
+// Exclusions applied: opening weeks (pre Sep 20) + Dec 20–Jan 10
 // ============================================================================
+
+// Cover floors by period — minimum forecast covers for Newcastle
+// Normal Sat floor 420: clean dataset min=366, P10=427 (no weeks below 420 in normal trading)
+// Normal Fri floor 155: clean P10 excl anomalies (Jan 9 post-New-Year = 89 excluded)
+const NEWCASTLE_COVER_FLOORS = {
+  normal:    { 0: 95,  1: 15,  2: 24,  3: 35,  4: 33,  5: 155, 6: 420 },
+  dec_early: { 0: 95,  1: 15,  2: 24,  3: 35,  4: 33,  5: 300, 6: 460 },
+  dec_late:  { 0: 80,  1: 15,  2: 24,  3: 35,  4: 33,  5:  80, 6: 275 },
+};
+
+// School holiday cover floors (higher than normal — family venue weekday uplift)
+// From back-test: Newcastle weekdays see 50–144% uplift during school breaks
+const NEWCASTLE_HOLIDAY_FLOORS = { 0: 115, 1: 141, 2: 125, 3: 169, 4: 169, 5: 155, 6: 420 };
+
+// Holiday boost multipliers applied on top of the standard forecast per day of week
+// Mon–Thu: significant uplift (families, daytime trade) | Fri–Sat: tiered model handles capacity
+// Sun: moderate uplift | Calibrated from Newcastle school holiday back-test data
+const NEWCASTLE_HOLIDAY_BOOST = { 0: 1.30, 1: 1.70, 2: 1.70, 3: 1.70, 4: 1.70, 5: 1.10, 6: 1.10 };
+
+// Generic holiday boost for Glasgow / Edinburgh (less data, conservative estimate)
+const GENERIC_HOLIDAY_BOOST = { 0: 1.15, 1: 1.15, 2: 1.15, 3: 1.15, 4: 1.15, 5: 1.10, 6: 1.05 };
+
+// Dec 1–15: Christmas party peak (corp bookings, Sat ~546, Fri ~362 median)
+// Dec 20–Jan 10: wind-down + post-New-Year hangover (Sat 283–308, Fri 71–214)
+const getNewcastlePeriod = (date) => {
+  const m = date.getMonth() + 1; // 1–12
+  const d = date.getDate();
+  if (m === 12 && d <= 15) return 'dec_early';
+  if ((m === 12 && d >= 20) || (m === 1 && d <= 10)) return 'dec_late';
+  return 'normal';
+};
+
+// Tiered Fri/Sat forecast for D-0 to D-6 only.
+// Returns integer cover forecast, or null (fall through to standard multiplier).
+// advSmall = regularCovers (≤10 pax bookings), advLarge = largeGroupCovers (>10 pax)
+const getNewcastleTieredForecast = (advSmall, advLarge, dowJs, targetDate, daysUntil) => {
+  if (daysUntil > 6) return null;
+  if (dowJs !== 5 && dowJs !== 6) return null;
+
+  const period = getNewcastlePeriod(targetDate);
+
+  if (dowJs === 6) { // Saturday
+    // Tiers: HIGH ≥200 adv → 1.8×, MEDIUM 100-199 → 2.5×, LOW <100 → floor
+    // Sat MAE: HIGH tier 6.2%, MEDIUM 17.8%, overall 14.6% (vs 17.0% old flat model)
+    const floors = { normal: 420, dec_early: 460, dec_late: 275 };
+    const caps   = { normal: 600, dec_early: 600, dec_late: 320 };
+    const floor  = floors[period] || floors.normal;
+    const cap    = caps[period]   || caps.normal;
+    let raw;
+    if (advSmall >= 200)      raw = Math.round(advSmall * 1.8) + advLarge;
+    else if (advSmall >= 100) raw = Math.round(advSmall * 2.5) + advLarge;
+    else                      raw = floor;
+    return Math.min(Math.max(raw, floor), cap);
+  }
+
+  if (dowJs === 5) { // Friday
+    // Tiers: HIGH ≥80 adv → 2.2×, MEDIUM 40-79 → 3.2×, LOW <40 → floor
+    // Fri MAE: MEDIUM tier 11.1%, overall 21.0% (vs 23.3% old flat model)
+    const floors = { normal: 155, dec_early: 300, dec_late: 80 };
+    const caps   = { normal: 400, dec_early: 450, dec_late: 250 };
+    const floor  = floors[period] || floors.normal;
+    const cap    = caps[period]   || caps.normal;
+    let raw;
+    if (advSmall >= 80)      raw = Math.round(advSmall * 2.2) + advLarge;
+    else if (advSmall >= 40) raw = Math.round(advSmall * 3.2) + advLarge;
+    else                     raw = floor;
+    return Math.min(Math.max(raw, floor), cap);
+  }
+
+  return null;
+};
+
+
 
 const getMultipliers = (venue, dayOfWeek) => {
   const venueData = MULTIPLIERS[venue] || MULTIPLIERS.default;
@@ -1603,22 +1690,42 @@ const NewcastleFoodVendorReport = () => {
             totalCardSales += value;
           }
 
-          // Aggregate by product (overall)
+          // Aggregate by product (overall) - track token vs purchased separately
           if (!itemSales[productName]) {
-            itemSales[productName] = { quantity: 0, total: 0, isToken: isToken };
+            itemSales[productName] = { 
+              quantity: 0, 
+              tokenIncome: 0, 
+              purchasedIncome: 0,
+              total: 0 
+            };
           }
           itemSales[productName].quantity += quantity;
+          if (isToken) {
+            itemSales[productName].tokenIncome += value;
+          } else {
+            itemSales[productName].purchasedIncome += value;
+          }
           itemSales[productName].total += value;
 
-          // NEW: Aggregate by date and product
+          // NEW: Aggregate by date and product - track token vs purchased separately
           if (dateKey) {
             if (!dailySales[dateKey]) {
               dailySales[dateKey] = {};
             }
             if (!dailySales[dateKey][productName]) {
-              dailySales[dateKey][productName] = { quantity: 0, total: 0 };
+              dailySales[dateKey][productName] = { 
+                quantity: 0, 
+                tokenIncome: 0,
+                purchasedIncome: 0,
+                total: 0 
+              };
             }
             dailySales[dateKey][productName].quantity += quantity;
+            if (isToken) {
+              dailySales[dateKey][productName].tokenIncome += value;
+            } else {
+              dailySales[dateKey][productName].purchasedIncome += value;
+            }
             dailySales[dateKey][productName].total += value;
           }
         });
@@ -1634,6 +1741,8 @@ const NewcastleFoodVendorReport = () => {
         const salesArray = Object.entries(itemSales).map(([product, data]) => ({
           item: product,
           quantity: data.quantity,
+          tokenIncome: data.tokenIncome,
+          purchasedIncome: data.purchasedIncome,
           total: data.total
         })).sort((a, b) => b.total - a.total);
 
@@ -1642,6 +1751,8 @@ const NewcastleFoodVendorReport = () => {
           const itemsArray = Object.entries(products).map(([product, data]) => ({
             item: product,
             quantity: data.quantity,
+            tokenIncome: data.tokenIncome,
+            purchasedIncome: data.purchasedIncome,
             total: data.total
           })).sort((a, b) => b.quantity - a.quantity); // Sort by quantity sold
 
@@ -1816,12 +1927,14 @@ const NewcastleFoodVendorReport = () => {
           const dayTableData = day.items.map(item => [
             item.item,
             item.quantity.toString(),
+            `£${item.tokenIncome.toFixed(2)}`,
+            `£${item.purchasedIncome.toFixed(2)}`,
             `£${item.total.toFixed(2)}`
           ]);
 
           doc.autoTable({
             startY: currentY,
-            head: [['Item', 'Qty', 'Total']],
+            head: [['Item', 'Qty', 'Token', 'Purchased', 'Total']],
             body: dayTableData,
             theme: 'plain',
             headStyles: {
@@ -1839,9 +1952,11 @@ const NewcastleFoodVendorReport = () => {
               fillColor: [253, 254, 233]
             },
             columnStyles: {
-              0: { cellWidth: 120 },
-              1: { halign: 'center', cellWidth: 25 },
-              2: { halign: 'right', cellWidth: 30 }
+              0: { cellWidth: 80 },
+              1: { halign: 'center', cellWidth: 20 },
+              2: { halign: 'right', cellWidth: 25 },
+              3: { halign: 'right', cellWidth: 25 },
+              4: { halign: 'right', cellWidth: 25 }
             },
             margin: { left: 20 },
             didAddPage: (data) => {
@@ -1875,12 +1990,14 @@ const NewcastleFoodVendorReport = () => {
       const tableData = reportData.sales.map(item => [
         item.item,
         item.quantity.toString(),
+        `£${item.tokenIncome.toFixed(2)}`,
+        `£${item.purchasedIncome.toFixed(2)}`,
         `£${item.total.toFixed(2)}`
       ]);
 
       doc.autoTable({
         startY: currentY,
-        head: [['Item', 'Total Qty', 'Total (inc VAT)']],
+        head: [['Item', 'Total Qty', 'Token', 'Purchased', 'Total']],
         body: tableData,
         theme: 'grid',
         headStyles: {
@@ -1896,9 +2013,11 @@ const NewcastleFoodVendorReport = () => {
           fillColor: [248, 250, 225]
         },
         columnStyles: {
-          0: { cellWidth: 100 },
-          1: { halign: 'center', cellWidth: 40 },
-          2: { halign: 'right', cellWidth: 40 }
+          0: { cellWidth: 70 },
+          1: { halign: 'center', cellWidth: 25 },
+          2: { halign: 'right', cellWidth: 25 },
+          3: { halign: 'right', cellWidth: 25 },
+          4: { halign: 'right', cellWidth: 30 }
         },
         didAddPage: (data) => {
           // Draw background FIRST on new pages
@@ -2156,6 +2275,8 @@ const NewcastleFoodVendorReport = () => {
                           <tr style={{ backgroundColor: '#f5f5f5' }}>
                             <th style={{ padding: '8px', textAlign: 'left', fontSize: '12px' }}>Item</th>
                             <th style={{ padding: '8px', textAlign: 'center', fontSize: '12px' }}>Qty</th>
+                            <th style={{ padding: '8px', textAlign: 'right', fontSize: '12px' }}>Token</th>
+                            <th style={{ padding: '8px', textAlign: 'right', fontSize: '12px' }}>Purchased</th>
                             <th style={{ padding: '8px', textAlign: 'right', fontSize: '12px' }}>Total</th>
                           </tr>
                         </thead>
@@ -2167,6 +2288,12 @@ const NewcastleFoodVendorReport = () => {
                                 {item.quantity}
                               </td>
                               <td style={{ padding: '6px', textAlign: 'right', fontSize: '13px' }}>
+                                £{item.tokenIncome.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '6px', textAlign: 'right', fontSize: '13px' }}>
+                                £{item.purchasedIncome.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '6px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>
                                 £{item.total.toFixed(2)}
                               </td>
                             </tr>
@@ -2187,7 +2314,9 @@ const NewcastleFoodVendorReport = () => {
                   <tr style={{ backgroundColor: BUCKY_GREEN, color: 'white' }}>
                     <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Item</th>
                     <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Total Quantity</th>
-                    <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Total (inc VAT)</th>
+                    <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Token</th>
+                    <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Purchased</th>
+                    <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2197,7 +2326,9 @@ const NewcastleFoodVendorReport = () => {
                       <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
                         {item.quantity}
                       </td>
-                      <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>£{item.total.toFixed(2)}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>£{item.tokenIncome.toFixed(2)}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>£{item.purchasedIncome.toFixed(2)}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>£{item.total.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2261,6 +2392,8 @@ const Glasgow14DayForecast = () => {
   const [rawData, setRawData] = useState([]); 
   const [weatherData, setWeatherData] = useState(null);
   const [showWeather, setShowWeather] = useState(true);
+  const [thisWeekHoliday, setThisWeekHoliday] = useState(false);
+  const [nextWeekHoliday, setNextWeekHoliday] = useState(false);
   const [loginError, setLoginError] = useState(null);
 
   useEffect(() => {
@@ -2369,7 +2502,36 @@ const Glasgow14DayForecast = () => {
       // 3. Forecast Logic
       let projectedRegular = Math.round(regularCovers * finalMult);
       let rawForecast = projectedRegular + largeGroupCovers;
-      
+
+      // Newcastle: tiered Fri/Sat model for D-0 to D-6, plus cover floors for all days
+      if (venue === 'newcastle') {
+        const tiered = getNewcastleTieredForecast(regularCovers, largeGroupCovers, dayOfWeek, iterDate, Math.max(0, daysOut));
+        if (tiered !== null) {
+          // Tiered model handles Fri/Sat within 6 days — replaces standard multiplier
+          rawForecast = tiered;
+        } else {
+          // All other days/horizons: apply cover floor as a safety net
+          const ncPeriod = getNewcastlePeriod(iterDate);
+          const ncFloors = NEWCASTLE_COVER_FLOORS[ncPeriod] || NEWCASTLE_COVER_FLOORS.normal;
+          const ncFloor  = ncFloors[dayOfWeek] || 0;
+          rawForecast = Math.max(rawForecast, ncFloor);
+        }
+      }
+
+      // School holiday boost — applied after base forecast is established
+      const isThisWeek = iterDate <= endOfCurrentWeek;
+      const isHoliday = isThisWeek ? thisWeekHoliday : nextWeekHoliday;
+      if (isHoliday && !isPast) {
+        const boostMap = venue === 'newcastle' ? NEWCASTLE_HOLIDAY_BOOST : GENERIC_HOLIDAY_BOOST;
+        const boost = boostMap[dayOfWeek] || 1.0;
+        rawForecast = Math.round(rawForecast * boost);
+        // For Newcastle, also enforce the higher holiday floors
+        if (venue === 'newcastle') {
+          const holidayFloor = NEWCASTLE_HOLIDAY_FLOORS[dayOfWeek] || 0;
+          rawForecast = Math.max(rawForecast, holidayFloor);
+        }
+      }
+
       const cap = VENUES[venue].capacity;
       
       // LOGIC FIX: Always respect actual bookings if they exceed capacity
@@ -2432,6 +2594,7 @@ const Glasgow14DayForecast = () => {
         multiplier: finalMult,
         forecastCovers,
         wasCapped,
+        isHoliday,
         
         staffHours,
         revenue,
@@ -2471,7 +2634,7 @@ const Glasgow14DayForecast = () => {
       }
     };
 
-  }, [rawData, weatherData, venue]);
+  }, [rawData, weatherData, venue, thisWeekHoliday, nextWeekHoliday]);
 
   // --------------------------------------------------------------------------
   // ROBUST CSV PARSER (FORECAST)
@@ -2955,18 +3118,21 @@ const Glasgow14DayForecast = () => {
                     <p className="text-xs text-gray-500">Includes past days for data verification</p>
                   </div>
                 </div>
+                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer select-none text-sm font-medium transition-colors ${thisWeekHoliday ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={thisWeekHoliday}
+                    onChange={e => setThisWeekHoliday(e.target.checked)}
+                    className="accent-amber-500 w-4 h-4"
+                  />
+                  🎒 School Holidays
+                </label>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <SummaryCard title="Forecast Covers" value={projection.summaries.thisWeek.covers} icon={Users} status="neutral" />
                 <SummaryCard title="Est. Revenue" value={`£${projection.summaries.thisWeek.revenue.toLocaleString()}`} icon={DollarSign} status="neutral" />
                 <SummaryCard title="Total Budget" value={`£${projection.summaries.thisWeek.budget.toLocaleString()}`} subtitle="Allowed Spend" status="neutral" />
-                <SummaryCard 
-                  title="Labor Variance" 
-                  value={`£${(projection.summaries.thisWeek.budget - projection.summaries.thisWeek.laborCost).toFixed(0)}`} 
-                  subtitle={projection.summaries.thisWeek.budget > projection.summaries.thisWeek.laborCost ? "Under Budget (Good)" : "Over Budget (Bad)"}
-                  status={projection.summaries.thisWeek.budget > projection.summaries.thisWeek.laborCost ? 'good' : 'bad'} 
-                />
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -2984,18 +3150,21 @@ const Glasgow14DayForecast = () => {
                     <p className="text-xs text-gray-500">Projected Performance</p>
                   </div>
                 </div>
+                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer select-none text-sm font-medium transition-colors ${nextWeekHoliday ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={nextWeekHoliday}
+                    onChange={e => setNextWeekHoliday(e.target.checked)}
+                    className="accent-amber-500 w-4 h-4"
+                  />
+                  🎒 School Holidays
+                </label>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <SummaryCard title="Forecast Covers" value={projection.summaries.nextWeek.covers} icon={Users} status="neutral" />
                 <SummaryCard title="Est. Revenue" value={`£${projection.summaries.nextWeek.revenue.toLocaleString()}`} icon={DollarSign} status="neutral" />
                  <SummaryCard title="Total Budget" value={`£${projection.summaries.nextWeek.budget.toLocaleString()}`} subtitle="Allowed Spend" status="neutral" />
-                <SummaryCard 
-                  title="Labor Variance" 
-                  value={`£${(projection.summaries.nextWeek.budget - projection.summaries.nextWeek.laborCost).toFixed(0)}`} 
-                  subtitle={projection.summaries.nextWeek.budget > projection.summaries.nextWeek.laborCost ? "Under Budget (Good)" : "Over Budget (Bad)"}
-                  status={projection.summaries.nextWeek.budget > projection.summaries.nextWeek.laborCost ? 'good' : 'bad'} 
-                />
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
