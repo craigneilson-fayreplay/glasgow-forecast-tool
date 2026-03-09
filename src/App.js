@@ -52,8 +52,8 @@ const FINANCIALS = {
 // Minimum Daily Budgets 
 const MINIMUM_DAILY_BUDGETS = {
   glasgow: { 0: 700, 1: 131, 2: 131, 3: 200, 4: 500, 5: 650, 6: 850 },
-  edinburgh: { 0: 700, 1: 131, 2: 131, 3: 600, 4: 600, 5: 650, 6: 850 },
-  newcastle: { 0: 600, 1: 600, 2: 600, 3: 750, 4: 750, 5: 1000, 6: 1600 }
+  edinburgh: { 0: 700, 1: 131, 2: 131, 3: 500, 4: 500, 5: 650, 6: 850 },
+  newcastle: { 0: 700, 1: 600, 2: 600, 3: 600, 4: 700, 5: 1000, 6: 1600 }
 };
 
 // Default Door Staff Costs by Venue and Day (0=Sun, 1=Mon, ..., 6=Sat)
