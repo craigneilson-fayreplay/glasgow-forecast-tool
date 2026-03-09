@@ -1932,6 +1932,15 @@ const NewcastleFoodVendorReport = () => {
             `£${item.total.toFixed(2)}`
           ]);
 
+          // Totals row
+          dayTableData.push([
+            'Totals',
+            day.items.reduce((s, i) => s + i.quantity, 0).toString(),
+            `£${day.items.reduce((s, i) => s + i.tokenIncome, 0).toFixed(2)}`,
+            `£${day.items.reduce((s, i) => s + i.purchasedIncome, 0).toFixed(2)}`,
+            `£${day.dayTotal.toFixed(2)}`
+          ]);
+
           doc.autoTable({
             startY: currentY,
             head: [['Item', 'Qty', 'Token', 'Purchased', 'Total']],
@@ -1959,8 +1968,13 @@ const NewcastleFoodVendorReport = () => {
               4: { halign: 'right', cellWidth: 25 }
             },
             margin: { left: 20 },
+            didParseCell: (data) => {
+              if (data.row.index === dayTableData.length - 1) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fillColor = [220, 220, 220];
+              }
+            },
             didAddPage: (data) => {
-              // Draw background FIRST on new pages
               doc.setFillColor(253, 254, 233);
               doc.rect(0, 0, pageWidth, pageHeight, 'F');
             }
@@ -2299,6 +2313,23 @@ const NewcastleFoodVendorReport = () => {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot>
+                          <tr style={{ borderTop: '2px solid #ccc', backgroundColor: '#f0f0f0' }}>
+                            <td style={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>Totals</td>
+                            <td style={{ padding: '8px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
+                              {day.items.reduce((s, i) => s + i.quantity, 0)}
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: '#c00' }}>
+                              £{day.items.reduce((s, i) => s + i.tokenIncome, 0).toFixed(2)}
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: '#c00' }}>
+                              £{day.items.reduce((s, i) => s + i.purchasedIncome, 0).toFixed(2)}
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: '#2a7a2a' }}>
+                              £{day.dayTotal.toFixed(2)}
+                            </td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   );
@@ -3133,6 +3164,12 @@ const Glasgow14DayForecast = () => {
                 <SummaryCard title="Forecast Covers" value={projection.summaries.thisWeek.covers} icon={Users} status="neutral" />
                 <SummaryCard title="Est. Revenue" value={`£${projection.summaries.thisWeek.revenue.toLocaleString()}`} icon={DollarSign} status="neutral" />
                 <SummaryCard title="Total Budget" value={`£${projection.summaries.thisWeek.budget.toLocaleString()}`} subtitle="Allowed Spend" status="neutral" />
+                <SummaryCard 
+                  title="Labor Variance" 
+                  value={`£${(projection.summaries.thisWeek.budget - projection.summaries.thisWeek.laborCost).toFixed(0)}`} 
+                  subtitle={projection.summaries.thisWeek.budget > projection.summaries.thisWeek.laborCost ? "Under Budget (Good)" : "Over Budget (Bad)"}
+                  status={projection.summaries.thisWeek.budget > projection.summaries.thisWeek.laborCost ? 'good' : 'bad'} 
+                />
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -3165,6 +3202,12 @@ const Glasgow14DayForecast = () => {
                 <SummaryCard title="Forecast Covers" value={projection.summaries.nextWeek.covers} icon={Users} status="neutral" />
                 <SummaryCard title="Est. Revenue" value={`£${projection.summaries.nextWeek.revenue.toLocaleString()}`} icon={DollarSign} status="neutral" />
                  <SummaryCard title="Total Budget" value={`£${projection.summaries.nextWeek.budget.toLocaleString()}`} subtitle="Allowed Spend" status="neutral" />
+                <SummaryCard 
+                  title="Labor Variance" 
+                  value={`£${(projection.summaries.nextWeek.budget - projection.summaries.nextWeek.laborCost).toFixed(0)}`} 
+                  subtitle={projection.summaries.nextWeek.budget > projection.summaries.nextWeek.laborCost ? "Under Budget (Good)" : "Over Budget (Bad)"}
+                  status={projection.summaries.nextWeek.budget > projection.summaries.nextWeek.laborCost ? 'good' : 'bad'} 
+                />
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
