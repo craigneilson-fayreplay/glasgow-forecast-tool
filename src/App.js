@@ -2494,7 +2494,7 @@ const Glasgow14DayForecast = () => {
     let iterDate = new Date(startOfView);
 
     while (iterDate <= endOfView) {
-      const dateKey = iterDate.toISOString().split('T')[0];
+      const dateKey = `${iterDate.getFullYear()}-${String(iterDate.getMonth()+1).padStart(2,'0')}-${String(iterDate.getDate()).padStart(2,'0')}`;
       
       // -- VENUE FILTERING --
       const dayData = rawData.find(d => d.dateKey === dateKey && d.venue.includes(venue));
