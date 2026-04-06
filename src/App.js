@@ -91,6 +91,30 @@ const MINIMUM_DAILY_BUDGETS = {
   newcastle: { 0: 700, 1: 600, 2: 600, 3: 600, 4: 700, 5: 850, 6: 1600 }
 };
 
+// Holiday Minimum Daily Budgets — extended hours (11am open) on midweek + earlier weekend
+// Glasgow: Thu+Fri open midweek (new during holidays), Sat+Sun from 11am not 12pm (extra hour)
+// Edinburgh: Wed+Thu+Fri open midweek (new during holidays), Sat+Sun from 11am (extra hour)
+const HOLIDAY_MINIMUM_DAILY_BUDGETS = {
+  glasgow:   { 0: 850, 1: 131, 2: 131, 3: 131, 4: 650, 5: 750, 6: 1000 },
+  edinburgh: { 0: 800, 1: 131, 2: 131, 3: 650, 4: 650, 5: 750, 6: 1000 },
+  newcastle: { 0: 700, 1: 600, 2: 600, 3: 600, 4: 700, 5: 850, 6: 1600 }
+};
+
+// Holiday midweek opening days (days that are normally closed but open during school holidays)
+// These need a cover floor since there are no advance bookings to multiply from
+const HOLIDAY_EXTRA_OPEN_DAYS = {
+  glasgow:   [4, 5],    // Thu, Fri open during holidays (normally closed Mon-Wed)
+  edinburgh: [3, 4, 5], // Wed, Thu, Fri open during holidays (normally closed Mon-Tue)
+  newcastle: []         // Already open all week
+};
+
+// Minimum covers for holiday midweek days (Glasgow/Edinburgh) — no booking base to multiply from
+const HOLIDAY_MIDWEEK_COVER_FLOORS = {
+  glasgow:   { 4: 60, 5: 80 },           // Thu: 60, Fri: 80
+  edinburgh: { 3: 60, 4: 60, 5: 80 },    // Wed: 60, Thu: 60, Fri: 80
+  newcastle: {}
+};
+
 // Default Door Staff Costs by Venue and Day (0=Sun, 1=Mon, ..., 6=Sat)
 const DEFAULT_DOOR_COSTS = {
   glasgow: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 300 },
@@ -289,6 +313,103 @@ const SummaryCard = ({ title, value, subtitle, status, icon: Icon }) => (
   </div>
 );
 
+// What holiday mode does per day/venue — shown as a hint on each day button
+const HOLIDAY_DAY_HINT = {
+  glasgow: {
+    // Thu/Fri: normally open, now also opens at 11am (extra hour)
+    // Sat/Sun: already open, now from 11am not 12pm
+    // Wed: normally closed, opens 11am during holidays (not applicable for Glasgow)
+    4: 'Opens 11am (Thu)',
+    5: 'Opens 11am (Fri)',
+    6: 'Opens 11am (Sat)',
+    0: 'Opens 11am (Sun)',
+  },
+  edinburgh: {
+    3: 'Opens 11am (Wed)',
+    4: 'Opens 11am (Thu)',
+    5: 'Opens 11am (Fri)',
+    6: 'Opens 11am (Sat)',
+    0: 'Opens 11am (Sun)',
+  },
+  newcastle: {
+    0: 'Holiday boost', 1: 'Holiday boost', 2: 'Holiday boost',
+    3: 'Holiday boost', 4: 'Holiday boost', 5: 'Holiday boost', 6: 'Holiday boost',
+  },
+};
+
+const HolidayPicker = ({ days, venue, holidayDays, setHolidayDays }) => {
+  const standardOpen = STANDARD_OPEN_DAYS[venue] || [];
+  const anyOn = days.some(d => holidayDays.has(d.dateKey));
+  const allOn = days.every(d => holidayDays.has(d.dateKey));
+
+  const toggle = (dateKey) => {
+    setHolidayDays(prev => {
+      const next = new Set(prev);
+      next.has(dateKey) ? next.delete(dateKey) : next.add(dateKey);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setHolidayDays(prev => {
+      const next = new Set(prev);
+      if (allOn) {
+        days.forEach(d => next.delete(d.dateKey));
+      } else {
+        days.forEach(d => next.add(d.dateKey));
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-bold text-amber-800">🎒 School / Bank Holiday days</span>
+        <span className="text-xs text-amber-600">— tap days to mark as holiday (applies extended hours &amp; demand boost)</span>
+        <button
+          onClick={toggleAll}
+          className={`ml-auto text-xs px-3 py-1 rounded-lg border font-medium whitespace-nowrap transition-colors ${allOn ? 'bg-amber-400 border-amber-500 text-white' : 'bg-white border-amber-300 text-amber-700 hover:bg-amber-100'}`}
+        >
+          {allOn ? 'Clear all' : anyOn ? 'Select all' : 'Select all'}
+        </button>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {days.map(d => {
+          const on = holidayDays.has(d.dateKey);
+          const isOpen = standardOpen.includes(d.date.getDay());
+          const hint = HOLIDAY_DAY_HINT[venue]?.[d.date.getDay()];
+          return (
+            <button
+              key={d.dateKey}
+              onClick={() => toggle(d.dateKey)}
+              title={hint || (isOpen ? 'Holiday boost applied' : 'Bank holiday — marks day as open with holiday budget')}
+              className={`flex flex-col items-center px-3 py-2 rounded-xl border-2 transition-all text-xs font-semibold min-w-[56px]
+                ${on
+                  ? 'bg-amber-400 border-amber-500 text-white shadow-md'
+                  : isOpen
+                    ? 'bg-white border-amber-200 text-amber-800 hover:bg-amber-50'
+                    : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700'
+                }`}
+            >
+              <span className="font-bold">{d.date.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+              <span className={`text-[10px] mt-0.5 ${on ? 'text-amber-100' : 'text-gray-400'}`}>
+                {d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </span>
+              {!isOpen && (
+                <span className={`text-[9px] mt-0.5 font-normal ${on ? 'text-amber-100' : 'text-gray-300'}`}>closed</span>
+              )}
+              {on && hint && (
+                <span className="text-[9px] mt-0.5 font-normal text-amber-100">11am open</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const ForecastTable = ({ data, showWeather }) => {
   if (!data || data.length === 0) return <div className="p-8 text-center text-gray-500">No data for this period</div>;
 
@@ -324,7 +445,9 @@ const ForecastTable = ({ data, showWeather }) => {
                   <div className="text-xs text-gray-500">
                     {day.dayName}
                     {day.isToday && <span className="ml-1 text-blue-600 font-bold">(Today)</span>}
-                    {isExtraDay && <span className="ml-1 text-amber-600 font-bold">(Extra Open)</span>}
+                    {isExtraDay && !day.isHolidayExtraDay && <span className="ml-1 text-amber-600 font-bold">(Extra Open)</span>}
+                    {day.isHolidayExtraDay && <span className="ml-1 text-orange-600 font-bold">🎒 Holiday Open (11am)</span>}
+                    {day.isHoliday && !day.isHolidayExtraDay && [0,5,6].includes(day.date.getDay()) && <span className="ml-1 text-orange-500 text-[10px]">🎒 from 11am</span>}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center text-gray-600">
@@ -651,16 +774,48 @@ const LookbackReport = () => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target.result;
-      const lines = text.split(/\r?\n/).slice(1);
+      const lines = text.split(/\r?\n/);
+      if (lines.length < 2) return;
+
+      // Parse headers by name — robust against column order changes
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+
+      // New format: "Timesheet Start Date" (col 24) and "Timesheet Total Cost" (col 32)
+      // Old format used hardcoded col 22 (date) and col 30 (cost) — no longer reliable
+      let dateIdx = headers.findIndex(h => h === 'timesheet start date');
+      let costIdx = headers.findIndex(h => h === 'timesheet total cost');
+      let statusIdx = headers.findIndex(h => h === 'timesheet status');
+
+      // Fallback to old column positions if headers not found (backward compat)
+      if (dateIdx === -1) dateIdx = 22;
+      if (costIdx === -1) costIdx = 30;
+
       const parsedRows = [];
-      lines.forEach(line => {
-        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
-        if (cols.length < 31) return;
-        const dateKey = parseDate(cols[22]);
-        const cost = parseFloat(cols[30]) || 0;
+      lines.slice(1).forEach(line => {
+        if (!line.trim()) return;
+        const cols = line.split(',').map(v => v.trim().replace(/"/g, '').replace(/\t/g, ''));
+        if (cols.length < costIdx + 1) return;
+
+        // Skip rows with no timesheet data (roster-only rows have empty Timesheet Start Date)
+        const dateStr = cols[dateIdx] || '';
+        if (!dateStr.trim()) return;
+
+        // Skip non-approved timesheets if status column is present
+        if (statusIdx !== -1) {
+          const status = (cols[statusIdx] || '').toLowerCase().trim();
+          if (status && status !== 'approved') return;
+        }
+
+        const dateKey = parseDate(dateStr);
         if (!dateKey) return;
-        parsedRows.push({ date: dateKey, cost: cost });
+
+        const cost = parseFloat(cols[costIdx]) || 0;
+        if (cost <= 0) return;
+
+        parsedRows.push({ date: dateKey, cost });
       });
+
+      console.log(`${targetVenue} timesheet: ${parsedRows.length} rows, £${parsedRows.reduce((s,r)=>s+r.cost,0).toFixed(2)} total`);
       setTimesheetRows(prev => ({ ...prev, [targetVenue]: parsedRows }));
     };
     reader.readAsText(file);
@@ -1798,8 +1953,7 @@ const Glasgow14DayForecast = () => {
   const [rawData, setRawData] = useState([]);
   const [weatherData, setWeatherData] = useState(null);
   const [showWeather, setShowWeather] = useState(true);
-  const [thisWeekHoliday, setThisWeekHoliday] = useState(false);
-  const [nextWeekHoliday, setNextWeekHoliday] = useState(false);
+  const [holidayDays, setHolidayDays] = useState(new Set()); // Set of 'YYYY-MM-DD' strings
   const [loginError, setLoginError] = useState(null);
 
   useEffect(() => {
@@ -1894,12 +2048,22 @@ const Glasgow14DayForecast = () => {
         }
       }
 
-      const isThisWeek = iterDate <= endOfCurrentWeek;
-      const isHoliday = isThisWeek ? thisWeekHoliday : nextWeekHoliday;
+      const isHoliday = holidayDays.has(dateKey);
+      const holidayExtraDays = HOLIDAY_EXTRA_OPEN_DAYS[venue] || [];
+      const isHolidayExtraDay = isHoliday && holidayExtraDays.includes(dayOfWeek);
+
       if (isHoliday && !isPast) {
         const boostMap = venue === 'newcastle' ? NEWCASTLE_HOLIDAY_BOOST : GENERIC_HOLIDAY_BOOST;
         const boost = boostMap[dayOfWeek] || 1.0;
         rawForecast = Math.round(rawForecast * boost);
+
+        // Apply midweek cover floor for Glasgow/Edinburgh holiday extra days
+        // (these days have no advance bookings so multiplier × 0 = 0 without a floor)
+        const midweekFloors = HOLIDAY_MIDWEEK_COVER_FLOORS[venue] || {};
+        if (midweekFloors[dayOfWeek]) {
+          rawForecast = Math.max(rawForecast, midweekFloors[dayOfWeek]);
+        }
+
         if (venue === 'newcastle') {
           const holidayFloor = NEWCASTLE_HOLIDAY_FLOORS[dayOfWeek] || 0;
           rawForecast = Math.max(rawForecast, holidayFloor);
@@ -1922,7 +2086,8 @@ const Glasgow14DayForecast = () => {
       const revenue = bookedRevenue + walkInRevenue;
       const avgSpend = forecastCovers > 0 ? (revenue / forecastCovers) : 0;
 
-      const minDailyBudget = MINIMUM_DAILY_BUDGETS[venue] ? (MINIMUM_DAILY_BUDGETS[venue][dayOfWeek] || 131) : 131;
+      const budgetTable = isHoliday ? HOLIDAY_MINIMUM_DAILY_BUDGETS : MINIMUM_DAILY_BUDGETS;
+      const minDailyBudget = budgetTable[venue] ? (budgetTable[venue][dayOfWeek] || 131) : 131;
       const incomeBasedBudget = revenue * (FINANCIALS.TARGET_LABOR_PCT / 100);
       const maxDailyBudget = 2000;
       const budget = Math.min(Math.max(incomeBasedBudget, minDailyBudget), maxDailyBudget);
@@ -1931,13 +2096,14 @@ const Glasgow14DayForecast = () => {
 
       const standardOpenDays = STANDARD_OPEN_DAYS[venue] || [];
       const isStandardOpen = standardOpenDays.includes(dayOfWeek);
-      const isExtraDay = !isStandardOpen && forecastCovers > 0;
+      // Mark as extra day if: not normally open AND (has forecast covers OR is a holiday extra-open day)
+      const isExtraDay = !isStandardOpen && (forecastCovers > 0 || isHolidayExtraDay);
       const laborPct = revenue > 0 ? (laborCost / revenue) * 100 : 0;
 
       processedDays.push({
         date: new Date(iterDate), dateStr: formatDate(iterDate), dateKey,
         dayName: iterDate.toLocaleDateString('en-GB', { weekday: 'long' }),
-        isToday: daysOut === 0, isPast, isExtraDay,
+        isToday: daysOut === 0, isPast, isExtraDay, isHolidayExtraDay,
         currentCovers, regularCovers, largeGroupCovers, bookedRevenue,
         multiplier: finalMult, forecastCovers, wasCapped, isHoliday,
         staffHours, revenue, avgSpend, budget, laborCost, laborPct,
@@ -1958,7 +2124,7 @@ const Glasgow14DayForecast = () => {
     };
 
     return { thisWeek, nextWeek, summaries: { thisWeek: calcSummary(thisWeek), nextWeek: calcSummary(nextWeek) } };
-  }, [rawData, weatherData, venue, thisWeekHoliday, nextWeekHoliday]);
+  }, [rawData, weatherData, venue, holidayDays]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -2211,18 +2377,23 @@ const Glasgow14DayForecast = () => {
             )}
 
             <section className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-1 bg-indigo-500 rounded-full"></div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">This Week</h3>
-                    <p className="text-xs text-gray-500">Includes past days for data verification</p>
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-1 bg-indigo-500 rounded-full"></div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg">This Week</h3>
+                      <p className="text-xs text-gray-500">Includes past days for data verification</p>
+                    </div>
                   </div>
                 </div>
-                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer select-none text-sm font-medium transition-colors ${thisWeekHoliday ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                  <input type="checkbox" checked={thisWeekHoliday} onChange={e => setThisWeekHoliday(e.target.checked)} className="accent-amber-500 w-4 h-4" />
-                  🎒 School Holidays
-                </label>
+                {/* Per-day holiday toggles — This Week */}
+                <HolidayPicker
+                  days={projection.thisWeek}
+                  venue={venue}
+                  holidayDays={holidayDays}
+                  setHolidayDays={setHolidayDays}
+                />
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <SummaryCard title="Forecast Covers" value={projection.summaries.thisWeek.covers} icon={Users} status="neutral" />
@@ -2236,18 +2407,23 @@ const Glasgow14DayForecast = () => {
             </section>
 
             <section>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-1 bg-purple-500 rounded-full"></div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">Next Week</h3>
-                    <p className="text-xs text-gray-500">Projected Performance</p>
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-1 bg-purple-500 rounded-full"></div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg">Next Week</h3>
+                      <p className="text-xs text-gray-500">Projected Performance</p>
+                    </div>
                   </div>
                 </div>
-                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer select-none text-sm font-medium transition-colors ${nextWeekHoliday ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                  <input type="checkbox" checked={nextWeekHoliday} onChange={e => setNextWeekHoliday(e.target.checked)} className="accent-amber-500 w-4 h-4" />
-                  🎒 School Holidays
-                </label>
+                {/* Per-day holiday toggles — Next Week */}
+                <HolidayPicker
+                  days={projection.nextWeek}
+                  venue={venue}
+                  holidayDays={holidayDays}
+                  setHolidayDays={setHolidayDays}
+                />
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <SummaryCard title="Forecast Covers" value={projection.summaries.nextWeek.covers} icon={Users} status="neutral" />
